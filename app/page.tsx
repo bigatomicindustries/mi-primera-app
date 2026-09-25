@@ -24,7 +24,6 @@ export default function Home() {
   };
 
   const handleGuardarCliente = async () => {
-    // Validamos que ningún campo esté vacío
     if (!nombre.trim() || !email.trim() || !empresa.trim()) {
       alert('Por favor, llena todos los campos.');
       return;
@@ -38,12 +37,10 @@ export default function Home() {
       empresa: empresa.trim(),
     };
 
-    // Guardamos el cliente en Supabase
     const { error } = await supabase
       .from('clientes')
       .insert([nuevoCliente]);
 
-    // Si ocurre un error
     if (error) {
       console.error('Código:', error.code);
       console.error('Mensaje:', error.message);
@@ -56,24 +53,17 @@ export default function Home() {
       return;
     }
 
-    // Si llegamos aquí, Supabase guardó el cliente
     console.log('Cliente guardado correctamente');
 
-    // Agregamos el cliente a la interfaz
     setClientes((clientesActuales) => [
       ...clientesActuales,
       nuevoCliente,
     ]);
 
-    // Limpiamos el formulario
     setNombre('');
     setEmail('');
     setEmpresa('');
-
-    // Cerramos el formulario
     setMostrarFormulario(false);
-
-    // Terminamos el estado de carga
     setGuardando(false);
   };
 
@@ -121,7 +111,7 @@ export default function Home() {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               disabled={guardando}
-              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
             />
 
             <input
@@ -130,7 +120,7 @@ export default function Home() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={guardando}
-              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
             />
 
             <input
@@ -139,22 +129,8 @@ export default function Home() {
               value={empresa}
               onChange={(e) => setEmpresa(e.target.value)}
               disabled={guardando}
-              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
+              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
             />
-
-            <div className="bg-slate-100 rounded-xl p-4 mb-4 text-sm text-slate-700">
-              <p>
-                <span className="font-semibold">Nombre:</span> {nombre}
-              </p>
-
-              <p>
-                <span className="font-semibold">Email:</span> {email}
-              </p>
-
-              <p>
-                <span className="font-semibold">Empresa:</span> {empresa}
-              </p>
-            </div>
 
             <div className="flex flex-col gap-3">
               <button
@@ -191,11 +167,9 @@ export default function Home() {
                   <p className="font-semibold text-slate-800">
                     {cliente.nombre}
                   </p>
-
                   <p className="text-sm text-slate-600 mt-1">
                     📧 {cliente.email}
                   </p>
-
                   <p className="text-sm text-slate-600">
                     🏢 {cliente.empresa}
                   </p>
