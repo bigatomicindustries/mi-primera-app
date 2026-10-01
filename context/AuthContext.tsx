@@ -265,77 +265,36 @@ if (puedeOperarError) {
     }
   }
 
-  useEffect(() => {
-    cargarUsuario();
+useEffect(() => {
+  // Validación inicial al cargar la aplicación.
+  void cargarUsuario();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session?.user) {
-          limpiarEstado();
-          setCargando(false);
-          return;
-        }
-
-        // No hacemos consultas adicionales aquí.
-        // cargarUsuario se encarga de validar
-        // perfil + negocio.
-        void cargarUsuario();
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    async function verificarUsuarioActivo() {
-      const {
-        data: { user: usuarioActual },
-      } = await supabase.auth.getUser();
-
-      if (!usuarioActual) {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(
+    (event, session) => {
+      // Solo reaccionamos cuando realmente
+      // se cierra la sesión.
+      if (event === "SIGNED_OUT") {
         limpiarEstado();
+        setCargando(false);
         return;
       }
 
-      setCargando(true);
-
-      try {
-        const permitido =
-          await validarUsuario(usuarioActual);
-
-        if (!permitido) {
-          await supabase.auth.signOut();
-          limpiarEstado();
-        }
-      } finally {
-        setCargando(false);
-      }
+      // IMPORTANTE:
+      // No llamamos cargarUsuario() en
+      // TOKEN_REFRESHED, INITIAL_SESSION, etc.
+      //
+      // Supabase puede refrescar el token al
+      // regresar a una pestaña y no queremos
+      // desmontar la interfaz por eso.
     }
+  );
 
-    function manejarVisibilidad() {
-      if (
-        document.visibilityState === "visible"
-      ) {
-        void verificarUsuarioActivo();
-      }
-    }
-
-    document.addEventListener(
-      "visibilitychange",
-      manejarVisibilidad
-    );
-
-    return () => {
-      document.removeEventListener(
-        "visibilitychange",
-        manejarVisibilidad
-      );
-    };
-  }, []);
+  return () => {
+    subscription.unsubscribe();
+  };
+}, []);
 
   async function cerrarSesion() {
     limpiarEstado();

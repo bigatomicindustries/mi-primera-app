@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import {
+  loadMercadoPago,
+} from "@mercadopago/sdk-js";
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
 
 type Suscripcion = {
   plan_name: string;
@@ -26,11 +34,180 @@ export default function PlanPage() {
     negocio,
   } = useAuth();
 
-  const [suscripcion, setSuscripcion] =
-    useState<Suscripcion | null>(null);
+const [suscripcion, setSuscripcion] =
+  useState<Suscripcion | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
+
+const [procesandoPlan, setProcesandoPlan] =
+  useState<string | null>(null);
+
+const [
+  mercadoPagoListo,
+  setMercadoPagoListo,
+] = useState(false);
+
+const [
+  planParaPagar,
+  setPlanParaPagar,
+] = useState<"pro" | "business" | null>(
+  null
+);
+
+useEffect(() => {
+  async function prepararMercadoPago() {
+    try {
+      const publicKey =
+        process.env
+          .NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
+
+      if (!publicKey) {
+        console.error(
+          "Falta NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY"
+        );
+        return;
+      }
+
+      await loadMercadoPago();
+
+      setMercadoPagoListo(true);
+    } catch (error) {
+      console.error(
+        "No se pudo cargar Mercado Pago:",
+        error
+      );
+    }
+  }
+
+  void prepararMercadoPago();
+}, []);
+
+useEffect(() => {
+  if (!planParaPagar || !mercadoPagoListo) {
+    return;
+  }
+
+  const publicKey =
+    process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
+
+  if (!publicKey || !window.MercadoPago) {
+    console.error(
+      "Mercado Pago todavía no está disponible."
+    );
+    return;
+  }
+
+  const amount =
+    planParaPagar === "pro"
+      ? "299"
+      : "699";
+
+  const mp = new window.MercadoPago(publicKey);
+
+  const cardForm = mp.cardForm({
+    amount,
+    iframe: true,
+
+    form: {
+      id: "form-checkout",
+
+      cardNumber: {
+        id: "form-checkout__cardNumber",
+        placeholder: "Número de tarjeta",
+      },
+
+      expirationDate: {
+        id: "form-checkout__expirationDate",
+        placeholder: "MM/AA",
+      },
+
+      securityCode: {
+        id: "form-checkout__securityCode",
+        placeholder: "CVV",
+      },
+
+      cardholderName: {
+        id: "form-checkout__cardholderName",
+        placeholder: "Nombre del titular",
+      },
+
+      issuer: {
+        id: "form-checkout__issuer",
+        placeholder: "Banco emisor",
+      },
+
+      installments: {
+        id: "form-checkout__installments",
+        placeholder: "Cuotas",
+      },
+
+      cardholderEmail: {
+        id: "form-checkout__cardholderEmail",
+        placeholder: "Correo electrónico",
+      },
+    },
+
+    callbacks: {
+      onFormMounted: (error: any) => {
+        if (error) {
+          console.error(
+            "Error montando CardForm:",
+            error
+          );
+          return;
+        }
+
+        console.log(
+          "CardForm de Mercado Pago listo"
+        );
+      },
+
+onSubmit: async (event: Event) => {
+  event.preventDefault();
+
+  try {
+    const data =
+      cardForm.getCardFormData();
+
+    if (!data.token) {
+      throw new Error(
+        "Mercado Pago no pudo generar el token de la tarjeta."
+      );
+    }
+
+    await contratarPlan(
+      planParaPagar,
+      data.token
+    );
+  } catch (error) {
+    console.error(
+      "Error procesando tarjeta:",
+      error
+    );
+  }
+},
+
+      onFetching: (resource: string) => {
+        console.log(
+          "Mercado Pago consultando:",
+          resource
+        );
+      },
+    },
+  });
+
+  return () => {
+    try {
+      cardForm.unmount();
+    } catch {
+      // El formulario ya pudo haberse desmontado.
+    }
+  };
+}, [
+  planParaPagar,
+  mercadoPagoListo,
+]);
 
   useEffect(() => {
     if (!perfil) return;
@@ -108,6 +285,7 @@ setSuscripcion(data[0]);
       2
     )
   );
+
 }
 
 async function probarCancelarCompraAjena() {
@@ -137,6 +315,81 @@ async function probarCancelarCompraAjena() {
       2
     )
   );
+}
+
+async function contratarPlan(
+  plan: "pro" | "business",
+  cardTokenId: string
+) {
+  try {
+    setProcesandoPlan(plan);
+    setError("");
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (
+      sessionError ||
+      !session?.access_token
+    ) {
+      throw new Error(
+        "Tu sesión ha expirado. Inicia sesión nuevamente."
+      );
+    }
+
+    const response = await fetch(
+      "/api/mercadopago/subscribe",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            `Bearer ${session.access_token}`,
+        },
+body: JSON.stringify({
+  plan,
+  card_token_id: cardTokenId,
+}),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          "No se pudo iniciar la suscripción."
+      );
+    }
+
+if (!data.success) {
+  throw new Error(
+    "No se pudo crear la suscripción."
+  );
+}
+
+setPlanParaPagar(null);
+
+alert(
+  data.status === "authorized"
+    ? "La suscripción fue autorizada correctamente."
+    : `La suscripción fue creada con estado: ${data.status}`
+);
+  } catch (error: any) {
+    console.error(
+      "Error contratando plan:",
+      error
+    );
+
+    setError(
+      error?.message ||
+        "No se pudo iniciar la suscripción."
+    );
+  } finally {
+    setProcesandoPlan(null);
+  }
 }
 
   function porcentaje(
@@ -357,27 +610,276 @@ async function probarCancelarCompraAjena() {
           </div>
         </div>
 
-        {/* FUTURO UPGRADE */}
+        {/* CAMBIAR DE PLAN */}
 
-        <div className="mt-6 rounded-3xl border bg-white p-7">
-          <h2 className="text-xl font-bold text-slate-900">
-            ¿Necesitas más capacidad?
+<div className="mt-6">
+  <div className="mb-5">
+    <h2 className="text-xl font-bold text-slate-900">
+      ¿Necesitas más capacidad?
+    </h2>
+
+    <p className="mt-2 text-slate-500">
+      Elige el plan que mejor se adapte a tu negocio.
+    </p>
+  </div>
+
+  <div className="grid gap-5 md:grid-cols-2">
+    {/* PLAN PRO */}
+    <div className="rounded-3xl border border-slate-200 bg-white p-7">
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Pro
+        </p>
+
+        <div className="mt-3 flex items-end gap-1">
+          <span className="text-4xl font-bold text-slate-900">
+            $299
+          </span>
+
+          <span className="mb-1 text-slate-500">
+            MXN / mes
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-3 text-sm text-slate-600">
+        <p>✓ Hasta 10 usuarios</p>
+        <p>✓ Hasta 5,000 productos</p>
+        <p>✓ Ventas e inventario</p>
+        <p>✓ Historial y control de caja</p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setPlanParaPagar("pro")}
+        disabled={
+          procesandoPlan !== null ||
+          suscripcion?.plan_slug === "pro"
+        }
+        className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+      >
+        {suscripcion?.plan_slug === "pro"
+          ? "Plan actual"
+          : procesandoPlan === "pro"
+          ? "Abriendo Mercado Pago..."
+          : "Elegir Pro"}
+      </button>
+    </div>
+
+    {/* PLAN BUSINESS */}
+    <div className="rounded-3xl border border-slate-900 bg-white p-7 shadow-sm">
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Business
+          </p>
+
+          <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+            Mayor capacidad
+          </span>
+        </div>
+
+        <div className="mt-3 flex items-end gap-1">
+          <span className="text-4xl font-bold text-slate-900">
+            $699
+          </span>
+
+          <span className="mb-1 text-slate-500">
+            MXN / mes
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-3 text-sm text-slate-600">
+        <p>✓ Hasta 50 usuarios</p>
+        <p>✓ Hasta 50,000 productos</p>
+        <p>✓ Ventas e inventario</p>
+        <p>✓ Historial y control de caja</p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() =>
+  setPlanParaPagar("business")
+}
+        disabled={
+          procesandoPlan !== null ||
+          suscripcion?.plan_slug === "business"
+        }
+        className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+      >
+        {suscripcion?.plan_slug === "business"
+          ? "Plan actual"
+          : procesandoPlan === "business"
+          ? "Abriendo Mercado Pago..."
+          : "Elegir Business"}
+      </button>
+    </div>
+  </div>
+</div>
+
+{/* MODAL DE PAGO */}
+
+{planParaPagar && (
+  <div
+    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+    onClick={() => setPlanParaPagar(null)}
+  >
+    <div
+      className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+            Suscripción
+          </p>
+
+          <h2 className="mt-2 text-2xl font-bold text-slate-900">
+            Plan{" "}
+            {planParaPagar === "pro"
+              ? "Pro"
+              : "Business"}
           </h2>
 
           <p className="mt-2 text-slate-500">
-            Próximamente podrás cambiar de plan
-            desde aquí.
+            {planParaPagar === "pro"
+              ? "$299 MXN al mes"
+              : "$699 MXN al mes"}
           </p>
-
-          <button
-            type="button"
-            disabled
-            className="mt-5 rounded-xl bg-slate-200 px-5 py-3 font-semibold text-slate-500"
-          >
-            Mejorar plan
-          </button>
-
         </div>
+
+        <button
+          type="button"
+          onClick={() => setPlanParaPagar(null)}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-600 transition hover:bg-slate-200"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+<form
+  id="form-checkout"
+  className="mt-7 space-y-4"
+>
+  {/* NÚMERO DE TARJETA */}
+
+  <div>
+    <label className="mb-2 block text-sm font-medium text-slate-700">
+      Número de tarjeta
+    </label>
+
+    <div
+      id="form-checkout__cardNumber"
+      className="h-12 rounded-xl border border-slate-300 bg-white px-4 py-3"
+    />
+  </div>
+
+  {/* VENCIMIENTO + CVV */}
+
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        Vencimiento
+      </label>
+
+      <div
+        id="form-checkout__expirationDate"
+        className="h-12 rounded-xl border border-slate-300 bg-white px-4 py-3"
+      />
+    </div>
+
+    <div>
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        Código de seguridad
+      </label>
+
+      <div
+        id="form-checkout__securityCode"
+        className="h-12 rounded-xl border border-slate-300 bg-white px-4 py-3"
+      />
+    </div>
+  </div>
+
+  {/* TITULAR */}
+
+  <div>
+    <label
+      htmlFor="form-checkout__cardholderName"
+      className="mb-2 block text-sm font-medium text-slate-700"
+    >
+      Nombre del titular
+    </label>
+
+    <input
+      id="form-checkout__cardholderName"
+      type="text"
+      placeholder="Como aparece en la tarjeta"
+      className="h-12 w-full rounded-xl border border-slate-300 px-4 text-slate-900 outline-none focus:border-indigo-500"
+    />
+  </div>
+
+  {/* EMAIL */}
+
+  <div>
+    <label
+      htmlFor="form-checkout__cardholderEmail"
+      className="mb-2 block text-sm font-medium text-slate-700"
+    >
+      Correo electrónico
+    </label>
+
+    <input
+      id="form-checkout__cardholderEmail"
+      type="email"
+      placeholder="correo@ejemplo.com"
+      className="h-12 w-full rounded-xl border border-slate-300 px-4 text-slate-900 outline-none focus:border-indigo-500"
+    />
+  </div>
+
+  {/* CAMPOS QUE MERCADO PAGO NECESITA */}
+
+  <select
+    id="form-checkout__issuer"
+    className="hidden"
+  />
+
+  <select
+    id="form-checkout__installments"
+    className="hidden"
+  />
+
+  <button
+    id="form-checkout__submit"
+    type="submit"
+    disabled={!mercadoPagoListo}
+    className="mt-2 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+  >
+    Continuar con el pago
+  </button>
+
+  <progress
+    value="0"
+    className="hidden"
+  />
+</form>
+
+      {!mercadoPagoListo && (
+        <p className="mt-4 text-sm text-amber-700">
+          Preparando Mercado Pago...
+        </p>
+      )}
+
+      <p className="mt-5 text-xs leading-5 text-slate-400">
+        Los datos de tu tarjeta serán procesados por
+        Mercado Pago. Mi Negocio no almacenará el
+        número de tarjeta ni el código de seguridad.
+      </p>
+    </div>
+  </div>
+)}
+
       </div>
     </main>
   );

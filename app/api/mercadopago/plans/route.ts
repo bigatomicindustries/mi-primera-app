@@ -1,0 +1,152 @@
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+export async function POST(request: Request) {
+  try {
+    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "MERCADOPAGO_ACCESS_TOKEN no está configurado" },
+        { status: 500 }
+      );
+    }
+
+    const body = await request.json();
+    const { slug } = body;
+
+    if (!slug || typeof slug !== "string") {
+      return NextResponse.json(
+        { error: "Debes proporcionar un slug válido" },
+        { status: 400 }
+      );
+    }
+
+    // Buscar el plan directamente en Supabase.
+    // El cliente ya no decide nombre, precio ni moneda.
+    const { data: plan, error: planError } = await supabaseAdmin
+      .from("plans")
+      .select(
+        "id, name, slug, price_monthly, currency, active, mercadopago_plan_id"
+      )
+      .eq("slug", slug)
+      .single();
+
+    if (planError || !plan) {
+      console.error("Error buscando plan:", planError);
+
+      return NextResponse.json(
+        { error: "Plan no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    if (!plan.active) {
+      return NextResponse.json(
+        { error: "El plan está inactivo" },
+        { status: 400 }
+      );
+    }
+
+    const price = Number(plan.price_monthly);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      return NextResponse.json(
+        { error: "Este plan no requiere una suscripción de pago" },
+        { status: 400 }
+      );
+    }
+
+    // Evitar crear accidentalmente el mismo plan dos veces.
+    if (plan.mercadopago_plan_id) {
+      return NextResponse.json(
+        {
+          error: "Este plan ya está vinculado con Mercado Pago",
+          mercadopago_plan_id: plan.mercadopago_plan_id,
+        },
+        { status: 409 }
+      );
+    }
+
+    const response = await fetch(
+      "https://api.mercadopago.com/preapproval_plan",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason: `Mi Negocio ${plan.name}`,
+          auto_recurring: {
+            frequency: 1,
+            frequency_type: "months",
+            transaction_amount: price,
+            currency_id: plan.currency,
+          },
+          back_url: "https://pos.mybusiness.mx/suscripcion",
+        }),
+      }
+    );
+
+    const mercadoPagoPlan = await response.json();
+
+    if (!response.ok) {
+      console.error("Error Mercado Pago:", mercadoPagoPlan);
+
+      return NextResponse.json(
+        {
+          error: "Mercado Pago rechazó la solicitud",
+          details: mercadoPagoPlan,
+        },
+        { status: response.status }
+      );
+    }
+
+    // Guardar automáticamente el ID devuelto por Mercado Pago.
+    const { error: updateError } = await supabaseAdmin
+      .from("plans")
+      .update({
+        mercadopago_plan_id: mercadoPagoPlan.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", plan.id);
+
+    if (updateError) {
+      console.error(
+        "El plan fue creado en Mercado Pago, pero no se pudo guardar en Supabase:",
+        updateError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "El plan fue creado en Mercado Pago, pero no se pudo guardar en Supabase",
+          mercadopago_plan_id: mercadoPagoPlan.id,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      plan: {
+        id: plan.id,
+        name: plan.name,
+        slug: plan.slug,
+        price_monthly: price,
+        currency: plan.currency,
+        mercadopago_plan_id: mercadoPagoPlan.id,
+        status: mercadoPagoPlan.status,
+        init_point: mercadoPagoPlan.init_point,
+      },
+    });
+  } catch (error) {
+    console.error("Error creando plan Mercado Pago:", error);
+
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
+  }
+}
