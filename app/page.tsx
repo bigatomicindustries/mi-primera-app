@@ -1,184 +1,818 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { supabase } from "../lib/supabase";
+import DetalleVenta from "./components/DetalleVenta";
+import { useAuth } from "@/context/AuthContext";
 
-type Cliente = {
-  nombre: string;
-  email: string;
-  empresa: string;
+type Venta = {
+  id: string;
+  number: string;
+  total: number;
+  paid_amount: number;
+  change_due: number;
+  payment_method: "cash" | "card";
+  created_at: string;
+  cash_session_id: string | null;
+
+  user_id: string | null;
+  user_name: string | null;
+  user_role: "admin" | "manager" | "cashier" | null;
+};
+
+type ItemVenta = {
+  sale_id: string;
+  product_id: string | null;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  unit_cost: number;
+};
+
+type Producto = {
+  id: string;
+  name: string;
+  stock: number;
+  minimum_stock: number;
+};
+
+type SesionCaja = {
+  id: string;
+  opening_amount: number;
+  opened_at: string;
+  status: "open" | "closed";
+};
+
+type MovimientoCaja = {
+  id: string;
+  cash_session_id: string;
+  movement_type: "income" | "expense";
+  amount: number;
+  concept: string;
+  reference_id: string | null;
+  created_at: string;
 };
 
 export default function Home() {
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [guardando, setGuardando] = useState(false);
+const {
+  negocio,
+  puedeAdministrar,
+  cargando: cargandoAuth,
+} = useAuth();
+  const [ventas, setVentas] = useState<Venta[]>([]);
+  const [items, setItems] = useState<ItemVenta[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [caja, setCaja] = useState<SesionCaja | null>(null);
+const [ventaSeleccionada, setVentaSeleccionada] =
+  useState<Venta | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+const [ventasCaja, setVentasCaja] = useState<Venta[]>([]);
+const [movimientosCaja, setMovimientosCaja] =
+  useState<MovimientoCaja[]>([]);
 
-  const [nombre, setNombre] = useState('');
-  const [email, setEmail] = useState('');
-  const [empresa, setEmpresa] = useState('');
+useEffect(() => {
+  if (cargandoAuth) return;
 
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  async function cargarDashboard() {
+    try {
+      setLoading(true);
+      setError("");
 
-  const handleCrearCliente = () => {
-    setMostrarFormulario(true);
-  };
+      // HOY
 
-  const handleGuardarCliente = async () => {
-    if (!nombre.trim() || !email.trim() || !empresa.trim()) {
-      alert('Por favor, llena todos los campos.');
-      return;
+        const ahora = new Date();
+
+        const inicioDia = new Date(
+          ahora.getFullYear(),
+          ahora.getMonth(),
+          ahora.getDate()
+        );
+
+        const finDia = new Date(
+          ahora.getFullYear(),
+          ahora.getMonth(),
+          ahora.getDate() + 1
+        );
+
+// VENTAS DE HOY
+
+const { data: ventasTodas, error: ventasError } =
+  await supabase.rpc("get_sales_history");
+
+if (ventasError) throw ventasError;
+
+const ventasHoy = ((ventasTodas as Venta[]) ?? []).filter(
+  (venta) => {
+    const fechaVenta = new Date(venta.created_at);
+
+    return (
+      fechaVenta >= inicioDia &&
+      fechaVenta < finDia
+    );
+  }
+);
+
+setVentas(ventasHoy);
+
+        // ITEMS DE LAS VENTAS DE HOY
+
+if (ventasHoy.length > 0) {
+  const idsVentas = ventasHoy.map(
+    (venta) => venta.id
+  );
+
+  const { data: itemsData, error: itemsError } =
+    await supabase
+      .from("sale_items")
+      .select(
+        "sale_id, product_id, name, quantity, unit_price"
+      )
+      .in("sale_id", idsVentas);
+
+  if (itemsError) throw itemsError;
+
+  if (puedeAdministrar) {
+    const {
+      data: costosData,
+      error: costosError,
+    } = await supabase.rpc("get_sale_item_costs", {
+      p_sale_ids: idsVentas,
+    });
+
+    if (costosError) throw costosError;
+
+    const costosPorVentaProducto =
+      new Map<string, number>();
+
+    (costosData ?? []).forEach(
+      (item: {
+        sale_id: string;
+        product_id: string | null;
+        unit_cost: number;
+      }) => {
+        const clave =
+          `${item.sale_id}:${item.product_id ?? "null"}`;
+
+        costosPorVentaProducto.set(
+          clave,
+          Number(item.unit_cost)
+        );
+      }
+    );
+
+    const itemsConCosto: ItemVenta[] =
+      (itemsData ?? []).map((item) => ({
+        ...item,
+        unit_cost:
+          costosPorVentaProducto.get(
+            `${item.sale_id}:${item.product_id ?? "null"}`
+          ) ?? 0,
+      }));
+
+    setItems(itemsConCosto);
+  } else {
+    const itemsSinCosto: ItemVenta[] =
+      (itemsData ?? []).map((item) => ({
+        ...item,
+        unit_cost: 0,
+      }));
+
+    setItems(itemsSinCosto);
+  }
+} else {
+  setItems([]);
+}
+
+        // INVENTARIO
+
+        const {
+          data: productosData,
+          error: productosError,
+        } = await supabase
+          .from("products")
+          .select(
+            "id, name, stock, minimum_stock"
+          )
+          .order("stock", { ascending: true });
+
+        if (productosError) throw productosError;
+
+        setProductos(productosData ?? []);
+
+        // CAJA ABIERTA
+
+        const { data: cajaData, error: cajaError } =
+          await supabase
+            .from("cash_sessions")
+            .select(
+              "id, opening_amount, opened_at, status"
+            )
+            .eq("status", "open")
+            .maybeSingle();
+
+        if (cajaError) throw cajaError;
+
+        setCaja(cajaData);
+
+        if (cajaData) {
+  // Ventas pertenecientes a la caja actualmente abierta
+  const { data: ventasCajaData, error: ventasCajaError } =
+    await supabase
+      .from("sales")
+      .select(
+        "id, number, total, paid_amount, change_due, payment_method, created_at, cash_session_id"
+      )
+      .eq("cash_session_id", cajaData.id)
+      .order("created_at", { ascending: false });
+
+  if (ventasCajaError) throw ventasCajaError;
+
+  setVentasCaja(
+    ((ventasCajaData as Venta[]) ?? [])
+  );
+
+  // Entradas y salidas pertenecientes a esta caja
+  const {
+    data: movimientosData,
+    error: movimientosError,
+  } = await supabase.rpc("get_cash_movements", {
+    p_cash_session_id: cajaData.id,
+  });
+
+  if (movimientosError) throw movimientosError;
+
+  setMovimientosCaja(
+    (movimientosData as MovimientoCaja[]) ?? []
+  );
+} else {
+  setVentasCaja([]);
+  setMovimientosCaja([]);
+}
+
+      } catch (error: any) {
+        console.error(
+          "Error al cargar dashboard:",
+          error
+        );
+
+        setError(
+          error?.message ||
+            "No se pudo cargar el dashboard."
+        );
+      } finally {
+        setLoading(false);
+      }
     }
 
-    setGuardando(true);
+cargarDashboard();
 
-    const nuevoCliente: Cliente = {
-      nombre: nombre.trim(),
-      email: email.trim(),
-      empresa: empresa.trim(),
-    };
+}, [cargandoAuth, puedeAdministrar]);
 
-    const { error } = await supabase
-      .from('clientes')
-      .insert([nuevoCliente]);
+  // -----------------------------
+  // CÁLCULOS
+  // -----------------------------
 
-    if (error) {
-      console.error('Código:', error.code);
-      console.error('Mensaje:', error.message);
-      console.error('Detalles:', error.details);
-      console.error('Hint:', error.hint);
+  const ingresos = ventas.reduce(
+    (suma, venta) =>
+      suma + Number(venta.total),
+    0
+  );
 
-      alert(`Error: ${error.message}`);
+  const costoProductos = items.reduce(
+    (suma, item) =>
+      suma +
+      Number(item.unit_cost) *
+        Number(item.quantity),
+    0
+  );
 
-      setGuardando(false);
-      return;
-    }
+  const utilidadBruta =
+    ingresos - costoProductos;
 
-    console.log('Cliente guardado correctamente');
+  const ticketPromedio =
+    ventas.length > 0
+      ? ingresos / ventas.length
+      : 0;
 
-    setClientes((clientesActuales) => [
-      ...clientesActuales,
-      nuevoCliente,
-    ]);
+     const ventasEfectivoCaja = ventasCaja.filter(
+  (venta) => venta.payment_method === "cash"
+);
 
-    setNombre('');
-    setEmail('');
-    setEmpresa('');
-    setMostrarFormulario(false);
-    setGuardando(false);
-  };
+const efectivoRecibidoCaja = ventasEfectivoCaja.reduce(
+  (suma, venta) =>
+    suma + Number(venta.paid_amount),
+  0
+);
 
-  const handleCancelar = () => {
-    setNombre('');
-    setEmail('');
-    setEmpresa('');
-    setMostrarFormulario(false);
-  };
+const cambioEntregadoCaja = ventasEfectivoCaja.reduce(
+  (suma, venta) =>
+    suma + Number(venta.change_due),
+  0
+);
+
+const efectivoNetoCaja =
+  efectivoRecibidoCaja - cambioEntregadoCaja;
+
+const entradasCaja = movimientosCaja
+  .filter(
+    (movimiento) =>
+      movimiento.movement_type === "income"
+  )
+  .reduce(
+    (suma, movimiento) =>
+      suma + Number(movimiento.amount),
+    0
+  );
+
+const salidasCaja = movimientosCaja
+  .filter(
+    (movimiento) =>
+      movimiento.movement_type === "expense"
+  )
+  .reduce(
+    (suma, movimiento) =>
+      suma + Number(movimiento.amount),
+    0
+  );
+
+const efectivoEsperadoCaja =
+  Number(caja?.opening_amount ?? 0) +
+  efectivoNetoCaja +
+  entradasCaja -
+  salidasCaja;
+
+  const productosStockBajo =
+    productos.filter(
+      (producto) =>
+        Number(producto.stock) <=
+        Number(producto.minimum_stock)
+    );
+
+  const formatoDinero = (cantidad: number) =>
+    new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+    }).format(cantidad);
+
+  const formatoHora = (fecha: string) =>
+    new Date(fecha).toLocaleTimeString(
+      "es-MX",
+      {
+        hour: "numeric",
+        minute: "2-digit",
+      }
+    );
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-6 py-12">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-slate-500">
+            Cargando dashboard...
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center border border-slate-100">
+    <main className="min-h-screen bg-slate-50 px-6 py-12">
+      <div className="mx-auto max-w-6xl">
 
-        <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-          <span className="text-3xl">🚀</span>
+        {/* ENCABEZADO */}
+
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+
+          <div>
+<p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+  {negocio?.name
+    ? `${negocio.name} POS`
+    : "MI NEGOCIO POS"}
+</p>
+
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">
+              Dashboard
+            </h1>
+
+            <p className="mt-2 text-slate-500">
+              Resumen de la operación de hoy.
+            </p>
+          </div>
+
+          <Link
+            href="/ventas"
+            className="rounded-xl bg-indigo-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-indigo-700"
+          >
+            + Nueva venta
+          </Link>
+
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-800 mb-3">
-          Mi primera app
-        </h1>
+        {/* ERROR */}
 
-        <p className="text-slate-500 mb-8 leading-relaxed">
-          Diseñando interfaces modernas, atractivas y listas para producción.
+        {error && (
+          <div className="mt-8 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* MÉTRICAS */}
+
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+          <div className="rounded-2xl border bg-white p-6">
+            <p className="text-sm text-slate-500">
+              Ventas de hoy
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              {ventas.length}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-white p-6">
+            <p className="text-sm text-slate-500">
+              Ingresos
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              {formatoDinero(ingresos)}
+            </p>
+          </div>
+
+{puedeAdministrar && (
+          <div className="rounded-2xl border bg-white p-6">
+            <p className="text-sm text-slate-500">
+              Utilidad bruta
+            </p>
+
+            <p
+              className={`mt-2 text-3xl font-bold ${
+                utilidadBruta >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              {formatoDinero(utilidadBruta)}
+            </p>
+  </div>
+)}
+
+          <div className="rounded-2xl border bg-white p-6">
+            <p className="text-sm text-slate-500">
+              Ticket promedio
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              {formatoDinero(ticketPromedio)}
+            </p>
+          </div>
+
+        </div>
+
+{/* ACCIONES RÁPIDAS */}
+
+<div className="mt-6">
+  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+    Acciones rápidas
+  </p>
+
+  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+    <Link
+      href="/ventas"
+      className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
+    >
+      <div className="flex items-center gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl">
+          🛒
+        </div>
+
+        <div>
+          <p className="font-bold text-slate-900">
+            Nueva venta
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Registrar una venta
+          </p>
+        </div>
+      </div>
+    </Link>
+
+{puedeAdministrar && (
+  <Link
+    href="/inventario"
+    className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
+  >
+    <div className="flex items-center gap-4">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl">
+        📦
+      </div>
+
+      <div>
+        <p className="font-bold text-slate-900">
+          Agregar existencias
         </p>
 
-        {!mostrarFormulario && (
-          <button
-            onClick={handleCrearCliente}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-100 active:scale-95"
-          >
-            Crear cliente
-          </button>
-        )}
+        <p className="mt-1 text-xs text-slate-500">
+          Entrada de mercancía
+        </p>
+      </div>
+    </div>
+  </Link>
+)}
 
-        {mostrarFormulario && (
-          <div className="mt-2 text-left">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 text-center">
-              Nuevo cliente
-            </h2>
+    <Link
+  href="/historial"
+  className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
+>
+  <div className="flex items-center gap-4">
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl">
+      🧾
+    </div>
 
-            <input
-              type="text"
-              placeholder="Nombre del cliente"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              disabled={guardando}
-              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
-            />
+    <div>
+      <p className="font-bold text-slate-900">
+        Historial
+      </p>
 
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={guardando}
-              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
-            />
+      <p className="mt-1 text-xs text-slate-500">
+        Consultar ventas
+      </p>
+    </div>
+  </div>
+</Link>
 
-            <input
-              type="text"
-              placeholder="Empresa"
-              value={empresa}
-              onChange={(e) => setEmpresa(e.target.value)}
-              disabled={guardando}
-              className="w-full border border-slate-300 rounded-xl px-4 py-3 mb-3 text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
-            />
+    <Link
+      href="/caja"
+      className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
+    >
+      <div className="flex items-center gap-4">
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl ${
+            caja
+              ? "bg-green-50"
+              : "bg-slate-100"
+          }`}
+        >
+          💵
+        </div>
 
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleGuardarCliente}
-                disabled={guardando}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition-colors duration-200 shadow-sm disabled:bg-emerald-400 disabled:cursor-not-allowed flex justify-center items-center"
-              >
-                {guardando ? 'Guardando...' : 'Guardar cliente'}
-              </button>
+        <div>
+          <p className="font-bold text-slate-900">
+            {caja ? "Ver caja" : "Abrir caja"}
+          </p>
 
-              <button
-                onClick={handleCancelar}
-                disabled={guardando}
-                className="w-full bg-white hover:bg-slate-50 text-slate-600 font-semibold py-3 rounded-xl border border-slate-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
+          <p className="mt-1 text-xs text-slate-500">
+            {caja
+              ? "Caja actualmente abierta"
+              : "Iniciar turno de caja"}
+          </p>
+        </div>
+      </div>
+    </Link>
 
-        {clientes.length > 0 && (
-          <div className="mt-8 text-left border-t border-slate-100 pt-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4">
-              Clientes guardados ({clientes.length})
-            </h2>
+  </div>
+</div>
 
-            <div className="space-y-3">
-              {clientes.map((cliente, index) => (
-                <div
-                  key={index}
-                  className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col"
-                >
-                  <p className="font-semibold text-slate-800">
-                    {cliente.nombre}
-                  </p>
-                  <p className="text-sm text-slate-600 mt-1">
-                    📧 {cliente.email}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    🏢 {cliente.empresa}
+        {/* CAJA + INVENTARIO */}
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+
+          {/* CAJA */}
+
+          <div className="rounded-2xl border bg-white p-6">
+
+            <div className="flex items-start justify-between gap-4">
+
+              <div>
+                <p className="text-sm text-slate-500">
+                  Estado de caja
+                </p>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <span
+                    className={`h-3 w-3 rounded-full ${
+                      caja
+                        ? "bg-green-500"
+                        : "bg-slate-300"
+                    }`}
+                  />
+
+                  <p className="text-2xl font-bold">
+                    {caja
+                      ? "Caja abierta"
+                      : "Caja cerrada"}
                   </p>
                 </div>
-              ))}
+
+{caja && (
+  <div className="mt-3">
+    <p className="text-sm text-slate-500">
+      Fondo inicial:{" "}
+      {formatoDinero(
+        Number(caja.opening_amount)
+      )}
+    </p>
+
+    <p className="mt-1 text-sm text-slate-500">
+Ventas en esta caja:{" "}
+{ventasCaja.length}
+    </p>
+
+    <p className="mt-3 text-sm text-slate-500">
+      Efectivo esperado
+    </p>
+
+    <p className="mt-1 text-2xl font-bold text-slate-900">
+      {formatoDinero(efectivoEsperadoCaja)}
+    </p>
+  </div>
+)}
+              </div>
+
+              <Link
+                href="/caja"
+                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Ver caja →
+              </Link>
+
             </div>
+
           </div>
-        )}
+
+          {/* STOCK BAJO */}
+
+          <div className="rounded-2xl border bg-white p-6">
+
+            <div className="flex items-start justify-between gap-4">
+
+              <div>
+                <p className="text-sm text-slate-500">
+                  Productos con stock bajo
+                </p>
+
+                <p
+                  className={`mt-2 text-3xl font-bold ${
+                    productosStockBajo.length > 0
+                      ? "text-red-600"
+                      : "text-green-600"
+                  }`}
+                >
+                  {productosStockBajo.length}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-400">
+                  de {productos.length} productos
+                </p>
+              </div>
+
+              <Link
+                href="/inventario"
+                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Ver inventario →
+              </Link>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* PARTE INFERIOR */}
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+
+          {/* ÚLTIMAS VENTAS */}
+
+          <div className="overflow-hidden rounded-2xl border bg-white">
+
+            <div className="border-b px-6 py-5">
+              <h2 className="font-bold text-slate-900">
+                Últimas ventas
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Ventas realizadas hoy.
+              </p>
+            </div>
+
+            {ventas.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <p className="text-slate-500">
+                  Aún no hay ventas hoy.
+                </p>
+              </div>
+            ) : (
+              ventas.slice(0, 5).map((venta) => (
+  <button
+    key={venta.id}
+    type="button"
+    onClick={() => setVentaSeleccionada(venta)}
+    className="flex w-full items-center justify-between border-b px-6 py-4 text-left transition hover:bg-slate-50 last:border-b-0"
+  >
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      {venta.number}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {formatoHora(
+                        venta.created_at
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+  <p className="font-bold">
+    {formatoDinero(
+      Number(venta.total)
+    )}
+  </p>
+
+  <p className="mt-1 text-xs font-medium text-indigo-600">
+    Ver detalle →
+  </p>
+</div>
+                </button>
+              ))
+            )}
+
+          </div>
+
+          {/* ALERTAS DE INVENTARIO */}
+
+          <div className="overflow-hidden rounded-2xl border bg-white">
+
+            <div className="border-b px-6 py-5">
+              <h2 className="font-bold text-slate-900">
+                Inventario
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Productos que requieren atención.
+              </p>
+            </div>
+
+            {productosStockBajo.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <p className="font-medium text-green-600">
+                  Inventario saludable
+                </p>
+
+                <p className="mt-1 text-sm text-slate-400">
+                  No hay productos con stock bajo.
+                </p>
+              </div>
+            ) : (
+              productosStockBajo
+                .slice(0, 5)
+                .map((producto) => (
+                  <div
+                    key={producto.id}
+                    className="flex items-center justify-between border-b px-6 py-4 last:border-b-0"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {producto.name}
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        Mínimo:{" "}
+                        {producto.minimum_stock}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="font-bold text-red-600">
+                        {producto.stock}
+                      </p>
+
+                      <p className="text-xs text-slate-400">
+                        unidades
+                      </p>
+                    </div>
+                  </div>
+                ))
+            )}
+
+          </div>
+
+                </div>
+
       </div>
+
+      <DetalleVenta
+        venta={ventaSeleccionada}
+        items={items}
+        onCerrar={() => setVentaSeleccionada(null)}
+      />
+
     </main>
   );
 }
