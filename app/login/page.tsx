@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   useRouter,
@@ -9,7 +9,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import Link from "next/link";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -242,5 +242,21 @@ useEffect(() => {
 
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-slate-50">
+          <p className="text-sm text-slate-500">
+            Cargando...
+          </p>
+        </main>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
