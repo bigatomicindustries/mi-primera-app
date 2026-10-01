@@ -271,6 +271,7 @@ if (turnstileResult.action !== "register-business") {
 const allowedTurnstileHostnames = [
   "localhost",
   "mi-primera-app-drab.vercel.app",
+  "pos.mybusiness.mx",
 ];
 
 if (
