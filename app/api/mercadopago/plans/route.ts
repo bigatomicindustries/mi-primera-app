@@ -1,8 +1,100 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
   try {
+    const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  return NextResponse.json(
+    { error: "Configuración del servidor incompleta" },
+    { status: 500 }
+  );
+}
+
+// 1. Exigir sesión autenticada
+const authorization =
+  request.headers.get("authorization");
+
+if (
+  !authorization ||
+  !authorization.startsWith("Bearer ")
+) {
+  return NextResponse.json(
+    { error: "No autorizado" },
+    { status: 401 }
+  );
+}
+
+const userAccessToken =
+  authorization.replace("Bearer ", "").trim();
+
+if (!userAccessToken) {
+  return NextResponse.json(
+    { error: "No autorizado" },
+    { status: 401 }
+  );
+}
+
+// 2. Verificar el token directamente con Supabase Auth
+const supabaseAuth = createClient(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
+
+const {
+  data: { user },
+  error: userError,
+} = await supabaseAuth.auth.getUser(
+  userAccessToken
+);
+
+if (userError || !user) {
+  return NextResponse.json(
+    { error: "Sesión inválida o expirada" },
+    { status: 401 }
+  );
+}
+
+// 3. Solo administradores de la plataforma
+const {
+  data: platformAdmin,
+  error: platformAdminError,
+} = await supabaseAdmin
+  .from("platform_admins")
+  .select("user_id")
+  .eq("user_id", user.id)
+  .maybeSingle();
+
+if (platformAdminError) {
+  console.error(
+    "Error verificando administrador de plataforma:",
+    platformAdminError
+  );
+
+  return NextResponse.json(
+    { error: "No se pudo verificar la autorización" },
+    { status: 500 }
+  );
+}
+
+if (!platformAdmin) {
+  return NextResponse.json(
+    { error: "No autorizado" },
+    { status: 403 }
+  );
+}
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
     if (!accessToken) {
