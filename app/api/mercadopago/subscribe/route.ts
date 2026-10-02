@@ -236,20 +236,23 @@ export async function POST(request: Request) {
     // Esto NO activa ni cambia todavía la suscripción
     // real del negocio.
 
-    const {
-      data: checkout,
-      error: checkoutError,
-    } = await supabaseAdmin
-      .from("subscription_checkouts")
-      .insert({
-        business_id: business.id,
-        plan_id: plan.id,
-        requested_by: user.id,
-        mercadopago_status: "pending",
-        payer_email: user.email ?? null,
-      })
-      .select("id")
-      .single();
+      const checkoutExpiresAt = new Date(
+  Date.now() + 30 * 60 * 1000
+).toISOString();
+
+const { data: checkout, error: checkoutError } =
+  await supabaseAdmin
+    .from("subscription_checkouts")
+    .insert({
+      business_id: business.id,
+      plan_id: plan.id,
+      requested_by: user.id,
+      mercadopago_status: "pending",
+      payer_email: user.email ?? null,
+      expires_at: checkoutExpiresAt,
+    })
+    .select("id")
+    .single();
 
     if (checkoutError || !checkout) {
       console.error(

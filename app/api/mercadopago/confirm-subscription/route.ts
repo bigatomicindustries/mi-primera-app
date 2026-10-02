@@ -95,13 +95,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!checkoutId) {
-  return NextResponse.json(
-    { error: "Falta checkout_id" },
-    { status: 400 }
-  );
-}
-
     // Validación básica del formato.
     if (!/^[a-zA-Z0-9_-]{10,100}$/.test(preapprovalId)) {
       return NextResponse.json(
@@ -110,7 +103,8 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
+if (
+  checkoutId &&
   !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     checkoutId
   )
@@ -304,11 +298,30 @@ export async function POST(request: Request) {
     }
 
 // ============================================================
-// 9. RESOLVER EL CHECKOUT LOCAL EXACTO
+// 9. RESOLVER EL CHECKOUT LOCAL
 // ============================================================
 
-const { data: checkout, error: checkoutError } =
-  await supabaseAdmin
+type SubscriptionCheckout = {
+  id: string;
+  business_id: string;
+  plan_id: string;
+  requested_by: string;
+  mercadopago_subscription_id: string | null;
+  mercadopago_status: string;
+  payer_email: string | null;
+  created_at: string;
+  updated_at: string;
+  expires_at: string | null;
+};
+
+let checkout: SubscriptionCheckout | null = null;
+
+// ------------------------------------------------------------
+// 9A. SI TENEMOS CHECKOUT_ID, USAMOS EL CHECKOUT EXACTO
+// ------------------------------------------------------------
+
+if (checkoutId) {
+  const { data, error } = await supabaseAdmin
     .from("subscription_checkouts")
     .select(
       `
@@ -320,27 +333,109 @@ const { data: checkout, error: checkoutError } =
       mercadopago_status,
       payer_email,
       created_at,
-      updated_at
+      updated_at,
+      expires_at
       `
     )
     .eq("id", checkoutId)
     .maybeSingle();
 
-if (checkoutError) {
-  console.error(
-    "Error buscando checkout exacto:",
-    checkoutError.message
-  );
+  if (error) {
+    console.error(
+      "Error buscando checkout exacto:",
+      error.message
+    );
 
-  return NextResponse.json(
-    { error: "No se pudo validar el intento de suscripción" },
-    { status: 500 }
-  );
+    return NextResponse.json(
+      { error: "No se pudo validar el intento de suscripción" },
+      { status: 500 }
+    );
+  }
+
+  checkout = data as SubscriptionCheckout | null;
+
+  if (!checkout) {
+    return NextResponse.json(
+      { error: "El intento de suscripción no existe" },
+      { status: 404 }
+    );
+  }
 }
+
+// ------------------------------------------------------------
+// 9B. SI SE PERDIÓ CHECKOUT_ID, RECUPERARLO DE FORMA CONTROLADA
+// ------------------------------------------------------------
+
+else {
+  const nowIso = new Date().toISOString();
+
+  const { data: candidates, error } = await supabaseAdmin
+    .from("subscription_checkouts")
+    .select(
+      `
+      id,
+      business_id,
+      plan_id,
+      requested_by,
+      mercadopago_subscription_id,
+      mercadopago_status,
+      payer_email,
+      created_at,
+      updated_at,
+      expires_at
+      `
+    )
+    .eq("business_id", business.id)
+    .eq("requested_by", user.id)
+    .eq("plan_id", internalPlan.id)
+    .eq("mercadopago_status", "pending")
+    .gt("expires_at", nowIso)
+    .order("created_at", { ascending: false })
+    .limit(2);
+
+  if (error) {
+    console.error(
+      "Error recuperando checkout pendiente:",
+      error.message
+    );
+
+    return NextResponse.json(
+      { error: "No se pudo validar el intento de suscripción" },
+      { status: 500 }
+    );
+  }
+
+  if (!candidates || candidates.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "No encontramos un intento de suscripción vigente para este pago",
+      },
+      { status: 404 }
+    );
+  }
+
+  // Nunca elegimos arbitrariamente entre varios intentos.
+  if (candidates.length !== 1) {
+    return NextResponse.json(
+      {
+        error:
+          "Encontramos más de un intento de suscripción vigente. No podemos determinar cuál corresponde a este pago.",
+      },
+      { status: 409 }
+    );
+  }
+
+  checkout = candidates[0] as SubscriptionCheckout;
+}
+
+// ------------------------------------------------------------
+// 9C. VALIDACIONES DEL CHECKOUT RESUELTO
+// ------------------------------------------------------------
 
 if (!checkout) {
   return NextResponse.json(
-    { error: "El intento de suscripción no existe" },
+    { error: "No se pudo resolver el intento de suscripción" },
     { status: 404 }
   );
 }
