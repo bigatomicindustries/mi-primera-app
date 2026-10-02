@@ -40,34 +40,55 @@ const {
   const [mostrarMas, setMostrarMas] = useState(false);
   const [mostrarUsuario, setMostrarUsuario] = useState(false);
 
-  const menuMasRef = useRef<HTMLDivElement>(null);
-  const menuUsuarioRef = useRef<HTMLDivElement>(null);
+const menuMasRef = useRef<HTMLDivElement>(null);
+const menuUsuarioRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function cerrarMenu(event: MouseEvent) {
-      const target = event.target as Node;
+const menuMasMovilRef = useRef<HTMLDivElement>(null);
+const menuUsuarioMovilRef = useRef<HTMLDivElement>(null);
 
-      if (
-        menuMasRef.current &&
-        !menuMasRef.current.contains(target)
-      ) {
-        setMostrarMas(false);
-      }
+useEffect(() => {
+  function cerrarMenu(event: MouseEvent) {
+    const target = event.target as Node;
 
-      if (
-        menuUsuarioRef.current &&
-        !menuUsuarioRef.current.contains(target)
-      ) {
-        setMostrarUsuario(false);
-      }
+    const dentroMenuMasDesktop =
+      menuMasRef.current?.contains(target);
+
+    const dentroMenuMasMovil =
+      menuMasMovilRef.current?.contains(target);
+
+    if (
+      !dentroMenuMasDesktop &&
+      !dentroMenuMasMovil
+    ) {
+      setMostrarMas(false);
     }
 
-    document.addEventListener("mousedown", cerrarMenu);
+    const dentroUsuarioDesktop =
+      menuUsuarioRef.current?.contains(target);
 
-    return () => {
-      document.removeEventListener("mousedown", cerrarMenu);
-    };
-  }, []);
+    const dentroUsuarioMovil =
+      menuUsuarioMovilRef.current?.contains(target);
+
+    if (
+      !dentroUsuarioDesktop &&
+      !dentroUsuarioMovil
+    ) {
+      setMostrarUsuario(false);
+    }
+  }
+
+  document.addEventListener(
+    "mousedown",
+    cerrarMenu
+  );
+
+  return () => {
+    document.removeEventListener(
+      "mousedown",
+      cerrarMenu
+    );
+  };
+}, []);
 
   async function manejarCerrarSesion() {
     setMostrarUsuario(false);
@@ -116,7 +137,7 @@ const {
       {/* MENÚ PRINCIPAL */}
 
       <div
-        ref={menuMasRef}
+        ref={menuMasMovilRef}
         className="relative"
       >
         <button
@@ -306,7 +327,7 @@ const {
 
       {perfil && (
         <div
-          ref={menuUsuarioRef}
+          ref={menuUsuarioMovilRef}
           className="relative"
         >
           <button
