@@ -44,6 +44,17 @@ const [procesandoPlan, setProcesandoPlan] =
 
   useEffect(() => {
   if (!perfil) return;
+
+  if (perfil.role !== "admin") {
+    router.replace("/");
+    return;
+  }
+
+  void cargarSuscripcion();
+}, [perfil?.id, perfil?.role, router]);
+
+  useEffect(() => {
+  if (!perfil) return;
   if (perfil.role !== "admin") return;
   if (!preapprovalId) return;
 
