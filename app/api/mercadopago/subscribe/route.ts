@@ -208,27 +208,34 @@ export async function POST(request: Request) {
       );
     }
 
-    if (currentSubscription.plan_id === plan.id) {
-      return NextResponse.json(
-        {
-          error:
-            "Tu negocio ya tiene seleccionado este plan",
-        },
-        { status: 409 }
-      );
-    }
+const subscriptionIsCancelled =
+  currentSubscription.status === "cancelled";
 
-    if (
-      currentSubscription.mercadopago_subscription_id
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "El negocio ya tiene una suscripción de Mercado Pago asociada",
-        },
-        { status: 409 }
-      );
-    }
+if (
+  currentSubscription.plan_id === plan.id &&
+  !subscriptionIsCancelled
+) {
+  return NextResponse.json(
+    {
+      error:
+        "Tu negocio ya tiene seleccionado este plan",
+    },
+    { status: 409 }
+  );
+}
+
+if (
+  currentSubscription.mercadopago_subscription_id &&
+  !subscriptionIsCancelled
+) {
+  return NextResponse.json(
+    {
+      error:
+        "El negocio ya tiene una suscripción de Mercado Pago asociada",
+    },
+    { status: 409 }
+  );
+}
 
     // 8. Crear intento local.
     //

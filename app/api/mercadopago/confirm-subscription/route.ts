@@ -519,6 +519,47 @@ if (
     }
 
     // ---------------------------------------------------------
+// 10B. VALIDAR LA SUSCRIPCIÓN ACTUAL DEL NEGOCIO
+// ---------------------------------------------------------
+
+const {
+  data: currentSubscription,
+  error: currentSubscriptionError,
+} = await supabaseAdmin
+  .from("subscriptions")
+  .select("id, status, mercadopago_subscription_id")
+  .eq("business_id", business.id)
+  .maybeSingle();
+
+if (currentSubscriptionError || !currentSubscription) {
+  console.error(
+    "Error obteniendo suscripción actual:",
+    currentSubscriptionError
+  );
+
+  return NextResponse.json(
+    { error: "No pudimos validar la suscripción actual" },
+    { status: 500 }
+  );
+}
+
+// Si ya existe otra suscripción de Mercado Pago asociada,
+// solamente permitimos reemplazarla si la anterior está cancelada.
+if (
+  currentSubscription.mercadopago_subscription_id &&
+  currentSubscription.mercadopago_subscription_id !== preapprovalId &&
+  currentSubscription.status !== "cancelled"
+) {
+  return NextResponse.json(
+    {
+      error:
+        "El negocio ya tiene otra suscripción de Mercado Pago activa",
+    },
+    { status: 409 }
+  );
+}
+
+    // ---------------------------------------------------------
     // 11. ACTUALIZAR LA SUSCRIPCIÓN INTERNA DEL NEGOCIO
     // ---------------------------------------------------------
 
