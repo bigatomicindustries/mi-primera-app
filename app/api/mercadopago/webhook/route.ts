@@ -195,32 +195,54 @@ if (
       }
     );
 
-    if (!mpResponse.ok) {
-      const errorText =
-        await mpResponse.text();
+if (!mpResponse.ok) {
+  const errorText =
+    await mpResponse.text();
 
-      console.error(
-        "No se pudo consultar el preapproval:",
-        {
-          status: mpResponse.status,
-          dataId,
-          response:
-            errorText.slice(0, 500),
-        }
-      );
-
-      // Devolvemos 200 porque la firma sí era válida.
-      // Estamos en fase de diagnóstico y no queremos
-      // provocar reintentos innecesarios por este caso.
-
-      return NextResponse.json(
-        {
-          received: true,
-          diagnostic_lookup_failed: true,
-        },
-        { status: 200 }
-      );
+  console.error(
+    "No se pudo consultar el preapproval:",
+    {
+      status: mpResponse.status,
+      dataId,
+      response:
+        errorText.slice(0, 500),
     }
+  );
+
+  // Si Mercado Pago está limitado o tiene un fallo
+  // temporal, devolvemos 503 para NO confirmar que
+  // procesamos correctamente la notificación.
+  //
+  // Esto permite que la notificación pueda
+  // reintentarse posteriormente.
+
+  if (
+    mpResponse.status === 429 ||
+    mpResponse.status >= 500
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Mercado Pago temporalmente no disponible",
+      },
+      { status: 503 }
+    );
+  }
+
+  // Para errores permanentes del recurso
+  // (por ejemplo, un preapproval inexistente),
+  // reconocemos la notificación pero no hacemos
+  // ningún cambio en Supabase.
+
+  return NextResponse.json(
+    {
+      received: true,
+      ignored: true,
+      reason: "preapproval_lookup_failed",
+    },
+    { status: 200 }
+  );
+}
 
     const preapproval =
       await mpResponse.json();
