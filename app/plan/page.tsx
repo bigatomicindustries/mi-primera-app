@@ -61,6 +61,18 @@ const [procesandoPlan, setProcesandoPlan] =
   void confirmarSuscripcionMercadoPago();
 }, [perfil, preapprovalId]);
 
+useEffect(() => {
+  function limpiarEstadoDePago() {
+    setProcesandoPlan(null);
+  }
+
+  window.addEventListener("pageshow", limpiarEstadoDePago);
+
+  return () => {
+    window.removeEventListener("pageshow", limpiarEstadoDePago);
+  };
+}, []);
+
 async function confirmarSuscripcionMercadoPago() {
   try {
     setConfirmandoSuscripcion(true);
@@ -296,7 +308,9 @@ sessionStorage.setItem(
   data.checkout_id
 );
 
-    window.location.href = data.checkout_url;
+setProcesandoPlan(null);
+
+window.location.href = data.checkout_url;
   } catch (error: any) {
     console.error(
       "Error contratando plan:",
