@@ -80,15 +80,9 @@ async function confirmarSuscripcionMercadoPago() {
       );
     }
 
-    const checkoutId = sessionStorage.getItem(
+const checkoutId = sessionStorage.getItem(
   "mercadopago_checkout_id"
 );
-
-if (!checkoutId) {
-  throw new Error(
-    "No encontramos el intento de suscripción iniciado en este navegador."
-  );
-}
 
     const response = await fetch(
       "/api/mercadopago/confirm-subscription",
@@ -100,7 +94,7 @@ if (!checkoutId) {
         },
 body: JSON.stringify({
   preapproval_id: preapprovalId,
-  checkout_id: checkoutId,
+  ...(checkoutId ? { checkout_id: checkoutId } : {}),
 }),
       }
     );
