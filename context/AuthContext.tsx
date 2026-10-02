@@ -273,21 +273,30 @@ useEffect(() => {
     data: { subscription },
   } = supabase.auth.onAuthStateChange(
     (event, session) => {
-      // Solo reaccionamos cuando realmente
-      // se cierra la sesión.
+      // Inicio de sesión real.
+      if (event === "SIGNED_IN" && session?.user) {
+        setCargando(true);
+
+        void validarUsuario(session.user).finally(() => {
+          setCargando(false);
+        });
+
+        return;
+      }
+
+      // Cierre de sesión real.
       if (event === "SIGNED_OUT") {
         limpiarEstado();
         setCargando(false);
         return;
       }
 
-      // IMPORTANTE:
-      // No llamamos cargarUsuario() en
-      // TOKEN_REFRESHED, INITIAL_SESSION, etc.
+      // No hacemos nada en TOKEN_REFRESHED,
+      // INITIAL_SESSION, etc.
       //
-      // Supabase puede refrescar el token al
-      // regresar a una pestaña y no queremos
-      // desmontar la interfaz por eso.
+      // Así evitamos volver a cargar toda la
+      // información del usuario simplemente
+      // porque Supabase refrescó el token.
     }
   );
 

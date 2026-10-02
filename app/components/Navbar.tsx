@@ -78,10 +78,320 @@ const {
     router.refresh();
   }
 
+  const primerNombre =
+  perfil?.full_name?.trim().split(/\s+/)[0] || "Cuenta";
+
   return (
     <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
-<div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6 sm:py-4">
-        {/* MARCA */}
+
+{/* ========================= */}
+{/* NAVEGACIÓN MÓVIL */}
+{/* ========================= */}
+
+<div className="md:hidden">
+  <div className="flex w-full items-center justify-between gap-3 px-4 py-3">
+
+    {/* MARCA */}
+
+    <Link
+      href="/"
+      className="min-w-0 shrink"
+      onClick={() => {
+        setMostrarMas(false);
+        setMostrarUsuario(false);
+      }}
+    >
+      <p className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-600">
+        {negocio?.name || "Mi Negocio"}
+      </p>
+
+      <p className="text-lg font-bold leading-tight text-slate-900">
+        POS
+      </p>
+    </Link>
+
+
+    <div className="flex shrink-0 items-center gap-2">
+
+      {/* MENÚ PRINCIPAL */}
+
+      <div
+        ref={menuMasRef}
+        className="relative"
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setMostrarMas((actual) => !actual);
+            setMostrarUsuario(false);
+          }}
+          className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 font-semibold text-slate-700 transition active:bg-slate-100"
+        >
+          <span
+            aria-hidden="true"
+            className="text-lg leading-none"
+          >
+            ☰
+          </span>
+
+          <span className="text-sm">
+            Más
+          </span>
+
+          <span
+            className={`text-xs text-slate-400 transition-transform duration-200 ${
+              mostrarMas ? "rotate-180" : ""
+            }`}
+          >
+            ▾
+          </span>
+        </button>
+
+
+        {mostrarMas && (
+          <div className="absolute right-0 top-full z-50 mt-2 max-h-[70vh] w-[min(19rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+
+            {/* NAVEGACIÓN PRINCIPAL */}
+
+            {opciones.map((opcion) => {
+              const activo =
+                pathname === opcion.href;
+
+              return (
+                <Link
+                  key={opcion.href}
+                  href={opcion.href}
+                  onClick={() =>
+                    setMostrarMas(false)
+                  }
+                  className={`block rounded-xl px-4 py-3 transition ${
+                    activo
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">
+                    {opcion.nombre}
+                  </p>
+                </Link>
+              );
+            })}
+
+
+            <div className="my-2 border-t border-slate-100" />
+
+
+            {/* SUPERADMIN */}
+
+            {esPlatformAdmin && (
+              <>
+                <Link
+                  href="/superadmin"
+                  onClick={() =>
+                    setMostrarMas(false)
+                  }
+                  className="block rounded-xl px-4 py-3 transition hover:bg-indigo-50"
+                >
+                  <p className="text-sm font-semibold text-indigo-700">
+                    Administración SaaS
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Gestiona negocios de la plataforma
+                  </p>
+                </Link>
+
+                <div className="my-2 border-t border-slate-100" />
+              </>
+            )}
+
+
+            {/* COMPRAS */}
+
+            {puedeAdministrar && (
+              <Link
+                href="/compras"
+                onClick={() =>
+                  setMostrarMas(false)
+                }
+                className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+              >
+                <p className="text-sm font-semibold text-slate-900">
+                  Compras
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Registra compras de mercancía
+                </p>
+              </Link>
+            )}
+
+
+            {/* EMPLEADOS */}
+
+            {perfil?.role === "admin" && (
+              <Link
+                href="/usuarios"
+                onClick={() =>
+                  setMostrarMas(false)
+                }
+                className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+              >
+                <p className="text-sm font-semibold text-slate-900">
+                  Empleados
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Administra usuarios, roles y accesos
+                </p>
+              </Link>
+            )}
+
+
+            <Link
+              href="/historial"
+              onClick={() =>
+                setMostrarMas(false)
+              }
+              className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+            >
+              <p className="text-sm font-semibold text-slate-900">
+                Historial de ventas
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Consulta ventas anteriores
+              </p>
+            </Link>
+
+
+            <Link
+              href="/movimientos"
+              onClick={() =>
+                setMostrarMas(false)
+              }
+              className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+            >
+              <p className="text-sm font-semibold text-slate-900">
+                Movimientos
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Entradas y ajustes de inventario
+              </p>
+            </Link>
+
+
+            <Link
+              href="/historial-cajas"
+              onClick={() =>
+                setMostrarMas(false)
+              }
+              className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+            >
+              <p className="text-sm font-semibold text-slate-900">
+                Historial de cajas
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Aperturas, cierres y arqueos
+              </p>
+            </Link>
+
+          </div>
+        )}
+      </div>
+
+
+      {/* MENÚ DEL USUARIO */}
+
+      {perfil && (
+        <div
+          ref={menuUsuarioRef}
+          className="relative"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setMostrarUsuario(
+                (actual) => !actual
+              );
+              setMostrarMas(false);
+            }}
+            className="flex h-11 max-w-[135px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 transition active:bg-slate-100"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+              {perfil.full_name
+                .charAt(0)
+                .toUpperCase()}
+            </div>
+
+            <span className="max-w-[62px] truncate text-sm font-semibold text-slate-800">
+              {primerNombre}
+            </span>
+
+            <span
+              className={`text-xs text-slate-400 transition-transform duration-200 ${
+                mostrarUsuario
+                  ? "rotate-180"
+                  : ""
+              }`}
+            >
+              ▾
+            </span>
+          </button>
+
+
+          {mostrarUsuario && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-[min(17rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+
+              <div className="border-b border-slate-100 px-4 py-3">
+                <p className="font-semibold text-slate-900">
+                  {perfil.full_name}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  {nombreRol(perfil.role)}
+                </p>
+              </div>
+
+
+              {perfil.role === "admin" && (
+                <Link
+                  href="/plan"
+                  onClick={() =>
+                    setMostrarUsuario(false)
+                  }
+                  className="mt-2 block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+                >
+                  <p className="text-sm font-semibold text-slate-900">
+                    Plan y uso
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Consulta tu plan y límites
+                  </p>
+                </Link>
+              )}
+
+
+              <button
+                type="button"
+                onClick={manejarCerrarSesion}
+                className="mt-2 w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+              >
+                Cerrar sesión
+              </button>
+
+            </div>
+          )}
+        </div>
+      )}
+
+    </div>
+  </div>
+</div>
+<div className="mx-auto hidden w-full max-w-7xl items-center justify-between gap-6 px-6 py-4 md:flex">        {/* MARCA */}
 
         <Link
           href="/"
@@ -98,7 +408,7 @@ const {
 
         {/* NAVEGACIÓN */}
 
-<nav className="min-w-0 flex flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">          {opciones.map((opcion) => {
+<nav className="flex items-center gap-1">         {opciones.map((opcion) => {
             const activo = pathname === opcion.href;
 
             return (

@@ -54,16 +54,23 @@ useEffect(() => {
       setCargando(true);
       setError("");
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+const { data, error } = await supabase.auth.signInWithPassword({
+  email,
+  password,
+});
 
-      if (error) {
-        setError("Correo o contraseña incorrectos.");
-        return;
-      }
+if (error) {
+  setError("Correo o contraseña incorrectos.");
+  return;
+}
 
+if (!data.session) {
+  setError("No se pudo establecer la sesión.");
+  return;
+}
+
+router.replace("/");
+router.refresh();
     } catch (error) {
       console.error(error);
       setError("No se pudo iniciar sesión.");
