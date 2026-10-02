@@ -43,17 +43,6 @@ const [procesandoPlan, setProcesandoPlan] =
   useState(false);
 
   useEffect(() => {
-    if (!perfil) return;
-
-    if (perfil.role !== "admin") {
-      router.replace("/");
-      return;
-    }
-
-    cargarSuscripcion();
-  }, [perfil, router]);
-
-  useEffect(() => {
   if (!perfil) return;
   if (perfil.role !== "admin") return;
   if (!preapprovalId) return;
@@ -134,9 +123,9 @@ body: JSON.stringify({
   }
 }
 
-  async function cargarSuscripcion() {
-    try {
-      setLoading(true);
+async function cargarSuscripcion() {
+  try {
+    setLoading(true);
       setError("");
 
       const {
@@ -158,22 +147,22 @@ if (!data || data.length === 0) {
 
 setSuscripcion(data[0]);
 
-} catch (error: any) {
-  console.error(
-    "Error cargando suscripción:",
-    error
-  );
+  } catch (error: any) {
+    console.error(
+      "Error cargando suscripción:",
+      error
+    );
 
-  setError(
-    error?.message ||
-      "No se pudo cargar la información del plan."
-  );
-} finally {
-  setLoading(false);
-}
+    setError(
+      error?.message ||
+        "No se pudo cargar la información del plan."
+    );
+  } finally {
+    setLoading(false);
   }
+}
 
-  async function probarLecturaCompraAjena() {
+async function probarLecturaCompraAjena() {
   const { data, error } = await supabase
     .from("purchases")
     .select(
