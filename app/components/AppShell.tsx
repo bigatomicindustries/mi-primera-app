@@ -66,17 +66,21 @@ function ContenidoPrivado({
     );
   }
 
-  if (
-    !cargando &&
-    !puedeOperar &&
-    !esRutaPlan
-  ) {
-    return (
-      <>
-        <Navbar />
+const mostrarBloqueoSuscripcion =
+  !cargando &&
+  !puedeOperar &&
+  !esRutaPlan;
 
-        <main className="min-h-screen bg-slate-50 px-6 py-12">
-          <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">
+return (
+  <>
+    <Navbar />
+
+    <div className="relative">
+      {children}
+
+      {mostrarBloqueoSuscripcion && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-2xl border border-amber-200 bg-white p-8 shadow-2xl">
             <h1 className="text-2xl font-bold text-slate-900">
               Tu suscripción no permite operar
             </h1>
@@ -86,18 +90,19 @@ function ContenidoPrivado({
               funciones operativas del POS están
               temporalmente bloqueadas.
             </p>
-          </div>
-        </main>
-      </>
-    );
-  }
 
-  return (
-    <>
-      <Navbar />
-      {children}
-    </>
-  );
+            <a
+              href="/plan"
+              className="mt-6 inline-flex rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
+            >
+              Ver planes
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </>
+);
 }
 
 export default function AppShell({
