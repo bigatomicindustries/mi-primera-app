@@ -73,7 +73,10 @@ export async function POST(request: NextRequest) {
     const accessToken =
       process.env.MERCADOPAGO_ACCESS_TOKEN;
 
-    if (!secret || !accessToken) {
+      const collectorId =
+  process.env.MERCADOPAGO_COLLECTOR_ID;
+
+if (!secret || !accessToken || !collectorId) {
       console.error(
         "Falta configuración de Mercado Pago"
       );
@@ -214,8 +217,32 @@ export async function POST(request: NextRequest) {
     const preapproval =
       await mpResponse.json();
 
-      // 5. Buscar la suscripción local asociada
-// al ID real de Mercado Pago.
+// 5. Validar que la suscripción pertenece
+// a nuestra cuenta de Mercado Pago.
+
+if (
+  String(preapproval?.collector_id) !==
+  collectorId
+) {
+  console.error(
+    "Webhook rechazado: collector_id no coincide",
+    {
+      mercadopagoSubscriptionId:
+        preapproval?.id,
+      collectorIdRecibido:
+        preapproval?.collector_id,
+    }
+  );
+
+  return NextResponse.json(
+    {
+      received: true,
+      ignored: true,
+      reason: "collector_mismatch",
+    },
+    { status: 200 }
+  );
+}
 
 const {
   data: suscripcionLocal,
