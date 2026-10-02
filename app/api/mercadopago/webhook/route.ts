@@ -354,6 +354,17 @@ console.log(
   }
 );
 
+
+return Response.json(
+  {
+    ok: true,
+    updated: true,
+    subscriptionId: suscripcionLocal.id,
+    status: estadoInterno,
+  },
+  { status: 200 }
+);
+
     // 5. DIAGNÓSTICO TEMPORAL
     //
     // Mostramos únicamente campos útiles.
