@@ -61,18 +61,6 @@ const [procesandoPlan, setProcesandoPlan] =
   void confirmarSuscripcionMercadoPago();
 }, [perfil, preapprovalId]);
 
-useEffect(() => {
-  function limpiarEstadoDePago() {
-    setProcesandoPlan(null);
-  }
-
-  window.addEventListener("pageshow", limpiarEstadoDePago);
-
-  return () => {
-    window.removeEventListener("pageshow", limpiarEstadoDePago);
-  };
-}, []);
-
 async function confirmarSuscripcionMercadoPago() {
   try {
     setConfirmandoSuscripcion(true);
