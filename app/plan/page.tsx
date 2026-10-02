@@ -98,9 +98,10 @@ if (!checkoutId) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          preapproval_id: preapprovalId,
-        }),
+body: JSON.stringify({
+  preapproval_id: preapprovalId,
+  checkout_id: checkoutId,
+}),
       }
     );
 
