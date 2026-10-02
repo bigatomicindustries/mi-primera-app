@@ -149,8 +149,7 @@ const {
 
 
         {mostrarMas && (
-          <div className="absolute right-0 top-full z-50 mt-2 max-h-[70vh] w-[min(19rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-
+<div className="fixed left-4 right-4 top-[5.5rem] z-50 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
             {/* NAVEGACIÓN PRINCIPAL */}
 
             {opciones.map((opcion) => {
