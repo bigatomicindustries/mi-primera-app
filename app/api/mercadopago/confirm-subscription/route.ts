@@ -440,6 +440,16 @@ if (!checkout) {
   );
 }
 
+if (
+  !checkout.expires_at ||
+  new Date(checkout.expires_at).getTime() <= Date.now()
+) {
+  return NextResponse.json(
+    { error: "El intento de suscripción ha expirado" },
+    { status: 409 }
+  );
+}
+
 // El checkout debe pertenecer al negocio autenticado.
 if (checkout.business_id !== business.id) {
   return NextResponse.json(
@@ -495,28 +505,44 @@ if (
     // 10. VINCULAR EL PREAPPROVAL AL CHECKOUT
     // ---------------------------------------------------------
 
-    const { error: checkoutUpdateError } =
-      await supabaseAdmin
-        .from("subscription_checkouts")
-        .update({
-          mercadopago_subscription_id: preapprovalId,
-          mercadopago_status: mpSubscription.status,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", checkout.id)
-        .eq("business_id", business.id);
+ const {
+  data: checkoutActualizado,
+  error: checkoutUpdateError,
+} = await supabaseAdmin
+  .from("subscription_checkouts")
+  .update({
+    mercadopago_subscription_id: preapprovalId,
+    mercadopago_status: mpSubscription.status,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("id", checkout.id)
+  .eq("business_id", business.id)
+  .select("id")
+  .maybeSingle();
 
-    if (checkoutUpdateError) {
-      console.error(
-        "Error vinculando checkout:",
-        checkoutUpdateError
-      );
+if (checkoutUpdateError) {
+  console.error(
+    "Error vinculando checkout:",
+    checkoutUpdateError
+  );
 
-      return NextResponse.json(
-        { error: "No pudimos vincular la suscripción" },
-        { status: 500 }
-      );
-    }
+  return NextResponse.json(
+    { error: "No pudimos vincular la suscripción" },
+    { status: 500 }
+  );
+}
+
+if (!checkoutActualizado) {
+  console.error(
+    "El checkout no fue actualizado:",
+    checkout.id
+  );
+
+  return NextResponse.json(
+    { error: "No pudimos vincular la suscripción" },
+    { status: 409 }
+  );
+}
 
     // ---------------------------------------------------------
 // 10B. VALIDAR LA SUSCRIPCIÓN ACTUAL DEL NEGOCIO
@@ -568,35 +594,52 @@ if (
         ? mpSubscription.next_payment_date
         : null;
 
-    const { error: subscriptionUpdateError } =
-      await supabaseAdmin
-        .from("subscriptions")
-        .update({
-          plan_id: internalPlan.id,
-          status: "active",
-          mercadopago_subscription_id: preapprovalId,
-          mercadopago_plan_id: mercadoPagoPlanId,
-          mercadopago_payer_email:
-            typeof mpSubscription.payer_email === "string" &&
-            mpSubscription.payer_email.trim()
-              ? mpSubscription.payer_email.trim()
-              : null,
-          current_period_ends_at: nextPaymentDate,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("business_id", business.id);
+const {
+  data: suscripcionActualizada,
+  error: subscriptionUpdateError,
+} = await supabaseAdmin
+  .from("subscriptions")
+  .update({
+    plan_id: internalPlan.id,
+    status: "active",
+    mercadopago_subscription_id: preapprovalId,
+    mercadopago_plan_id: mercadoPagoPlanId,
+    mercadopago_payer_email:
+      typeof mpSubscription.payer_email === "string" &&
+      mpSubscription.payer_email.trim()
+        ? mpSubscription.payer_email.trim()
+        : null,
+    current_period_ends_at: nextPaymentDate,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("business_id", business.id)
+  .eq("id", currentSubscription.id)
+  .select("id")
+  .maybeSingle();
 
-    if (subscriptionUpdateError) {
-      console.error(
-        "Error actualizando suscripción interna:",
-        subscriptionUpdateError
-      );
+if (subscriptionUpdateError) {
+  console.error(
+    "Error actualizando suscripción interna:",
+    subscriptionUpdateError
+  );
 
-      return NextResponse.json(
-        { error: "No pudimos activar el plan" },
-        { status: 500 }
-      );
-    }
+  return NextResponse.json(
+    { error: "No pudimos activar el plan" },
+    { status: 500 }
+  );
+}
+
+if (!suscripcionActualizada) {
+  console.error(
+    "La suscripción interna no fue actualizada:",
+    currentSubscription.id
+  );
+
+  return NextResponse.json(
+    { error: "No pudimos activar el plan" },
+    { status: 409 }
+  );
+}
 
     // ---------------------------------------------------------
     // 12. RESPUESTA
