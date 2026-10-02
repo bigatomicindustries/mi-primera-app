@@ -571,21 +571,27 @@ window.location.href = data.checkout_url;
         <p>✓ Historial y control de caja</p>
       </div>
 
-      <button
-        type="button"
-        onClick={() => void contratarPlan("pro")}
-        disabled={
-          procesandoPlan !== null ||
-          suscripcion?.plan_slug === "pro"
-        }
-        className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
-      >
-        {suscripcion?.plan_slug === "pro"
-          ? "Plan actual"
-          : procesandoPlan === "pro"
-          ? "Abriendo Mercado Pago..."
-          : "Elegir Pro"}
-      </button>
+<button
+  type="button"
+  onClick={() => void contratarPlan("pro")}
+  disabled={
+    procesandoPlan !== null ||
+    (
+      suscripcion?.plan_slug === "pro" &&
+      suscripcion?.status !== "cancelled"
+    )
+  }
+  className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+>
+  {procesandoPlan === "pro"
+    ? "Abriendo Mercado Pago..."
+    : suscripcion?.plan_slug === "pro" &&
+      suscripcion?.status === "cancelled"
+    ? "Volver a contratar Pro"
+    : suscripcion?.plan_slug === "pro"
+    ? "Plan actual"
+    : "Elegir Pro"}
+</button>
     </div>
 
     {/* PLAN BUSINESS */}
@@ -619,21 +625,27 @@ window.location.href = data.checkout_url;
         <p>✓ Historial y control de caja</p>
       </div>
 
-      <button
-        type="button"
-onClick={() => void contratarPlan("business")}
-        disabled={
-          procesandoPlan !== null ||
-          suscripcion?.plan_slug === "business"
-        }
-        className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
-      >
-        {suscripcion?.plan_slug === "business"
-          ? "Plan actual"
-          : procesandoPlan === "business"
-          ? "Abriendo Mercado Pago..."
-          : "Elegir Business"}
-      </button>
+<button
+  type="button"
+  onClick={() => void contratarPlan("business")}
+  disabled={
+    procesandoPlan !== null ||
+    (
+      suscripcion?.plan_slug === "business" &&
+      suscripcion?.status !== "cancelled"
+    )
+  }
+  className="mt-7 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+>
+  {procesandoPlan === "business"
+    ? "Abriendo Mercado Pago..."
+    : suscripcion?.plan_slug === "business" &&
+      suscripcion?.status === "cancelled"
+    ? "Volver a contratar Business"
+    : suscripcion?.plan_slug === "business"
+    ? "Plan actual"
+    : "Elegir Business"}
+</button>
     </div>
   </div>
 </div>
