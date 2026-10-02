@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
@@ -21,6 +21,10 @@ type Suscripcion = {
 export default function PlanPage() {
   const router = useRouter();
 
+  const searchParams = useSearchParams();
+
+const preapprovalId = searchParams.get("preapproval_id");
+
   const {
     perfil,
     negocio,
@@ -35,6 +39,9 @@ const [error, setError] = useState("");
 const [procesandoPlan, setProcesandoPlan] =
   useState<string | null>(null);
 
+  const [confirmandoSuscripcion, setConfirmandoSuscripcion] =
+  useState(false);
+
   useEffect(() => {
     if (!perfil) return;
 
@@ -45,6 +52,92 @@ const [procesandoPlan, setProcesandoPlan] =
 
     cargarSuscripcion();
   }, [perfil, router]);
+
+  useEffect(() => {
+  if (!perfil) return;
+  if (perfil.role !== "admin") return;
+  if (!preapprovalId) return;
+
+  void confirmarSuscripcionMercadoPago();
+}, [perfil, preapprovalId]);
+
+async function confirmarSuscripcionMercadoPago() {
+  try {
+    setConfirmandoSuscripcion(true);
+    setError("");
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (
+      sessionError ||
+      !session?.access_token
+    ) {
+      throw new Error(
+        "Tu sesión ha expirado. Inicia sesión nuevamente."
+      );
+    }
+
+    const checkoutId = sessionStorage.getItem(
+  "mercadopago_checkout_id"
+);
+
+if (!checkoutId) {
+  throw new Error(
+    "No encontramos el intento de suscripción iniciado en este navegador."
+  );
+}
+
+    const response = await fetch(
+      "/api/mercadopago/confirm-subscription",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          preapproval_id: preapprovalId,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          "No pudimos confirmar tu suscripción."
+      );
+    }
+
+    // Volvemos a consultar Supabase para mostrar
+    // inmediatamente el nuevo plan.
+    await cargarSuscripcion();
+
+    sessionStorage.removeItem(
+  "mercadopago_checkout_id"
+);
+
+    // Quitamos el preapproval_id de la URL para evitar
+    // volver a procesarlo al recargar la página.
+    router.replace("/plan");
+  } catch (error: any) {
+    console.error(
+      "Error confirmando suscripción:",
+      error
+    );
+
+    setError(
+      error?.message ||
+        "No pudimos confirmar tu suscripción."
+    );
+  } finally {
+    setConfirmandoSuscripcion(false);
+  }
+}
 
   async function cargarSuscripcion() {
     try {
@@ -196,6 +289,17 @@ async function contratarPlan(
         "No se recibió el checkout de Mercado Pago."
       );
     }
+
+    if (!data.checkout_id) {
+  throw new Error(
+    "No se recibió el identificador del checkout."
+  );
+}
+
+sessionStorage.setItem(
+  "mercadopago_checkout_id",
+  data.checkout_id
+);
 
     window.location.href = data.checkout_url;
   } catch (error: any) {
