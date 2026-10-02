@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   try {
-    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseUrl =
+      process.env.NEXT_PUBLIC_SUPABASE_URL;
+
     const supabaseAnonKey =
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!accessToken || !supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
         { error: "Configuración del servidor incompleta" },
         { status: 500 }
@@ -17,6 +20,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Obtener token del usuario autenticado
+
     const authorization =
       request.headers.get("authorization");
 
@@ -40,7 +44,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Verificar el token directamente con Supabase Auth
+    // 2. Verificar sesión con Supabase
+
     const supabaseAuth = createClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -66,49 +71,24 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!user.email) {
+    // 3. Leer plan solicitado
+
+    const body = await request.json();
+
+    const planSlug = body?.plan;
+
+    if (
+      typeof planSlug !== "string" ||
+      !["pro", "business"].includes(planSlug)
+    ) {
       return NextResponse.json(
-        {
-          error:
-            "El usuario autenticado no tiene un correo electrónico",
-        },
+        { error: "Plan inválido" },
         { status: 400 }
       );
     }
 
-    // 3. Leer solamente el plan solicitado
-const body = await request.json();
+    // 4. Obtener perfil real desde Supabase
 
-const {
-  plan: planSlug,
-  card_token_id: cardTokenId,
-} = body;
-
-if (
-  typeof planSlug !== "string" ||
-  !["pro", "business"].includes(planSlug)
-) {
-  return NextResponse.json(
-    { error: "Plan inválido" },
-    { status: 400 }
-  );
-}
-
-if (
-  typeof cardTokenId !== "string" ||
-  !cardTokenId.trim()
-) {
-  return NextResponse.json(
-    {
-      error:
-        "No se recibió un token de tarjeta válido",
-    },
-    { status: 400 }
-  );
-}
-
-    // 4. Obtener perfil REAL desde la base de datos.
-    // No confiamos en role/business_id enviados por el navegador.
     const {
       data: profile,
       error: profileError,
@@ -142,7 +122,8 @@ if (
       );
     }
 
-    // 5. Comprobar que el negocio siga activo
+    // 5. Obtener negocio real del usuario
+
     const {
       data: business,
       error: businessError,
@@ -152,10 +133,7 @@ if (
       .eq("id", profile.business_id)
       .single();
 
-    if (
-      businessError ||
-      !business
-    ) {
+    if (businessError || !business) {
       return NextResponse.json(
         { error: "Negocio no encontrado" },
         { status: 404 }
@@ -169,7 +147,9 @@ if (
       );
     }
 
-    // 6. Obtener el plan y su ID real de Mercado Pago
+    // 6. Obtener el plan desde la base de datos.
+    // No confiamos en precio ni IDs enviados por el navegador.
+
     const {
       data: plan,
       error: planError,
@@ -205,7 +185,8 @@ if (
       );
     }
 
-    // 7. Revisar la suscripción actual del negocio
+    // 7. Revisar suscripción actual del negocio
+
     const {
       data: currentSubscription,
       error: subscriptionError,
@@ -217,10 +198,7 @@ if (
       .eq("business_id", business.id)
       .single();
 
-    if (
-      subscriptionError ||
-      !currentSubscription
-    ) {
+    if (subscriptionError || !currentSubscription) {
       return NextResponse.json(
         {
           error:
@@ -252,190 +230,82 @@ if (
       );
     }
 
-// 8. Crear primero nuestro checkout local.
-// Así tenemos un ID interno antes de hablar con Mercado Pago.
-const {
-  data: checkout,
-  error: checkoutError,
-} = await supabaseAdmin
-  .from("subscription_checkouts")
-  .insert({
-    business_id: business.id,
-    plan_id: plan.id,
-    requested_by: user.id,
-    mercadopago_status: "pending",
-    payer_email: "test@testuser.com",
-  })
-  .select("id")
-  .single();
+    // 8. Crear intento local.
+    //
+    // IMPORTANTE:
+    // Esto NO activa ni cambia todavía la suscripción
+    // real del negocio.
 
-if (checkoutError || !checkout) {
-  console.error(
-    "Error creando checkout local:",
-    checkoutError
-  );
+    const {
+      data: checkout,
+      error: checkoutError,
+    } = await supabaseAdmin
+      .from("subscription_checkouts")
+      .insert({
+        business_id: business.id,
+        plan_id: plan.id,
+        requested_by: user.id,
+        mercadopago_status: "pending",
+        payer_email: user.email ?? null,
+      })
+      .select("id")
+      .single();
 
-  return NextResponse.json(
-    {
-      error:
-        "No se pudo iniciar el proceso de suscripción",
-    },
-    { status: 500 }
-  );
-}
+    if (checkoutError || !checkout) {
+      console.error(
+        "Error creando checkout local:",
+        checkoutError
+      );
 
-// 9. Usaremos nuestro checkout ID como referencia.
-// Es más limpio y seguro que codificar business_id y plan_id.
-const externalReference =
-  `subscription_checkout:${checkout.id}`;
+      return NextResponse.json(
+        {
+          error:
+            "No se pudo iniciar el proceso de suscripción",
+        },
+        { status: 500 }
+      );
+    }
 
-// 10. Crear suscripción individual en Mercado Pago
-const mercadoPagoResponse = await fetch(
-  "https://api.mercadopago.com/preapproval",
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-body: JSON.stringify({
-  preapproval_plan_id:
-    plan.mercadopago_plan_id,
+    // 9. Construir checkout alojado por Mercado Pago.
+    //
+    // Mercado Pago se encargará de:
+    // - inicio de sesión del pagador
+    // - tarjeta
+    // - tokenización
+    // - autorización
+    // - creación del preapproval individual
 
-  payer_email: user.email,
+    const checkoutUrl =
+      "https://www.mercadopago.com.mx/subscriptions/checkout" +
+      `?preapproval_plan_id=${encodeURIComponent(
+        plan.mercadopago_plan_id
+      )}`;
 
-  card_token_id:
-    cardTokenId,
+    // 10. Devolver URL al frontend.
+    //
+    // NO modificamos subscriptions.
+    // NO consideramos el pago confirmado.
+    // NO activamos Pro/Business aquí.
 
-  status: "authorized",
+    return NextResponse.json({
+      success: true,
 
-  external_reference:
-    externalReference,
-}),
-  }
-);
+      checkout_id: checkout.id,
 
-const mercadoPagoRaw =
-  await mercadoPagoResponse.text();
+      checkout_url: checkoutUrl,
 
-let mercadoPagoSubscription: any = null;
-
-try {
-  mercadoPagoSubscription =
-    mercadoPagoRaw
-      ? JSON.parse(mercadoPagoRaw)
-      : null;
-} catch {
-  mercadoPagoSubscription =
-    mercadoPagoRaw;
-}
-
-if (!mercadoPagoResponse.ok) {
-  console.error(
-    "Mercado Pago HTTP status:",
-    mercadoPagoResponse.status
-  );
-
-  console.error(
-    "Mercado Pago response:",
-    mercadoPagoRaw
-  );
-
-  // Conservamos el registro para auditoría,
-  // pero indicamos que Mercado Pago rechazó
-  // la creación.
-  await supabaseAdmin
-    .from("subscription_checkouts")
-    .update({
-      mercadopago_status: "creation_failed",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", checkout.id);
-
-  return NextResponse.json(
-    {
-      error:
-        "Mercado Pago rechazó la creación de la suscripción",
-      details: mercadoPagoSubscription,
-    },
-    { status: mercadoPagoResponse.status }
-  );
-}
-
-// 11. Vincular nuestro checkout con la
-// suscripción creada por Mercado Pago.
-const {
-  error: checkoutUpdateError,
-} = await supabaseAdmin
-  .from("subscription_checkouts")
-  .update({
-    mercadopago_subscription_id:
-      mercadoPagoSubscription.id,
-
-    mercadopago_status:
-      mercadoPagoSubscription.status ||
-      "pending",
-
-    updated_at:
-      new Date().toISOString(),
-  })
-  .eq("id", checkout.id);
-
-if (checkoutUpdateError) {
-  console.error(
-    "Mercado Pago creó la suscripción, pero no pudimos vincularla:",
-    checkoutUpdateError
-  );
-
-  return NextResponse.json(
-    {
-      error:
-        "La suscripción fue creada en Mercado Pago, pero no pudo vincularse localmente",
-
-      checkout_id:
-        checkout.id,
-
-      mercadopago_subscription_id:
-        mercadoPagoSubscription.id,
-    },
-    { status: 500 }
-  );
-}
-
-// IMPORTANTE:
-// Todavía NO cambiamos subscriptions.plan_id.
-//
-// El plan vigente solo cambiará cuando
-// confirmemos el estado correspondiente
-// desde Mercado Pago.
-
-return NextResponse.json({
-  success: true,
-
-  checkout_id:
-    checkout.id,
-
-  checkout_url:
-    mercadoPagoSubscription.init_point,
-
-  mercadopago_subscription_id:
-    mercadoPagoSubscription.id,
-
-  status:
-    mercadoPagoSubscription.status,
-
-  plan: {
-    name: plan.name,
-    slug: plan.slug,
-    price_monthly:
-      Number(plan.price_monthly),
-    currency: plan.currency,
-  },
-});
-
+      plan: {
+        name: plan.name,
+        slug: plan.slug,
+        price_monthly: Number(
+          plan.price_monthly
+        ),
+        currency: plan.currency,
+      },
+    });
   } catch (error) {
     console.error(
-      "Error creando suscripción:",
+      "Error iniciando checkout de suscripción:",
       error
     );
 

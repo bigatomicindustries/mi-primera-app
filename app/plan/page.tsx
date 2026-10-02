@@ -4,14 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import {
-  loadMercadoPago,
-} from "@mercadopago/sdk-js";
-declare global {
-  interface Window {
-    MercadoPago: any;
-  }
-}
 
 type Suscripcion = {
   plan_name: string;
@@ -42,172 +34,6 @@ const [error, setError] = useState("");
 
 const [procesandoPlan, setProcesandoPlan] =
   useState<string | null>(null);
-
-const [
-  mercadoPagoListo,
-  setMercadoPagoListo,
-] = useState(false);
-
-const [
-  planParaPagar,
-  setPlanParaPagar,
-] = useState<"pro" | "business" | null>(
-  null
-);
-
-useEffect(() => {
-  async function prepararMercadoPago() {
-    try {
-      const publicKey =
-        process.env
-          .NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
-
-      if (!publicKey) {
-        console.error(
-          "Falta NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY"
-        );
-        return;
-      }
-
-      await loadMercadoPago();
-
-      setMercadoPagoListo(true);
-    } catch (error) {
-      console.error(
-        "No se pudo cargar Mercado Pago:",
-        error
-      );
-    }
-  }
-
-  void prepararMercadoPago();
-}, []);
-
-useEffect(() => {
-  if (!planParaPagar || !mercadoPagoListo) {
-    return;
-  }
-
-  const publicKey =
-    process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
-
-  if (!publicKey || !window.MercadoPago) {
-    console.error(
-      "Mercado Pago todavía no está disponible."
-    );
-    return;
-  }
-
-  const amount =
-    planParaPagar === "pro"
-      ? "299"
-      : "699";
-
-  const mp = new window.MercadoPago(publicKey);
-
-  const cardForm = mp.cardForm({
-    amount,
-    iframe: true,
-
-    form: {
-      id: "form-checkout",
-
-      cardNumber: {
-        id: "form-checkout__cardNumber",
-        placeholder: "Número de tarjeta",
-      },
-
-      expirationDate: {
-        id: "form-checkout__expirationDate",
-        placeholder: "MM/AA",
-      },
-
-      securityCode: {
-        id: "form-checkout__securityCode",
-        placeholder: "CVV",
-      },
-
-      cardholderName: {
-        id: "form-checkout__cardholderName",
-        placeholder: "Nombre del titular",
-      },
-
-      issuer: {
-        id: "form-checkout__issuer",
-        placeholder: "Banco emisor",
-      },
-
-      installments: {
-        id: "form-checkout__installments",
-        placeholder: "Cuotas",
-      },
-
-      cardholderEmail: {
-        id: "form-checkout__cardholderEmail",
-        placeholder: "Correo electrónico",
-      },
-    },
-
-    callbacks: {
-      onFormMounted: (error: any) => {
-        if (error) {
-          console.error(
-            "Error montando CardForm:",
-            error
-          );
-          return;
-        }
-
-        console.log(
-          "CardForm de Mercado Pago listo"
-        );
-      },
-
-onSubmit: async (event: Event) => {
-  event.preventDefault();
-
-  try {
-    const data =
-      cardForm.getCardFormData();
-
-    if (!data.token) {
-      throw new Error(
-        "Mercado Pago no pudo generar el token de la tarjeta."
-      );
-    }
-
-    await contratarPlan(
-      planParaPagar,
-      data.token
-    );
-  } catch (error) {
-    console.error(
-      "Error procesando tarjeta:",
-      error
-    );
-  }
-},
-
-      onFetching: (resource: string) => {
-        console.log(
-          "Mercado Pago consultando:",
-          resource
-        );
-      },
-    },
-  });
-
-  return () => {
-    try {
-      cardForm.unmount();
-    } catch {
-      // El formulario ya pudo haberse desmontado.
-    }
-  };
-}, [
-  planParaPagar,
-  mercadoPagoListo,
-]);
 
   useEffect(() => {
     if (!perfil) return;
@@ -318,8 +144,7 @@ async function probarCancelarCompraAjena() {
 }
 
 async function contratarPlan(
-  plan: "pro" | "business",
-  cardTokenId: string
+  plan: "pro" | "business"
 ) {
   try {
     setProcesandoPlan(plan);
@@ -348,10 +173,9 @@ async function contratarPlan(
           Authorization:
             `Bearer ${session.access_token}`,
         },
-body: JSON.stringify({
-  plan,
-  card_token_id: cardTokenId,
-}),
+        body: JSON.stringify({
+          plan,
+        }),
       }
     );
 
@@ -364,19 +188,16 @@ body: JSON.stringify({
       );
     }
 
-if (!data.success) {
-  throw new Error(
-    "No se pudo crear la suscripción."
-  );
-}
+    if (
+      !data.success ||
+      typeof data.checkout_url !== "string"
+    ) {
+      throw new Error(
+        "No se recibió el checkout de Mercado Pago."
+      );
+    }
 
-setPlanParaPagar(null);
-
-alert(
-  data.status === "authorized"
-    ? "La suscripción fue autorizada correctamente."
-    : `La suscripción fue creada con estado: ${data.status}`
-);
+    window.location.href = data.checkout_url;
   } catch (error: any) {
     console.error(
       "Error contratando plan:",
@@ -387,7 +208,7 @@ alert(
       error?.message ||
         "No se pudo iniciar la suscripción."
     );
-  } finally {
+
     setProcesandoPlan(null);
   }
 }
@@ -651,7 +472,7 @@ alert(
 
       <button
         type="button"
-        onClick={() => setPlanParaPagar("pro")}
+        onClick={() => void contratarPlan("pro")}
         disabled={
           procesandoPlan !== null ||
           suscripcion?.plan_slug === "pro"
@@ -699,9 +520,7 @@ alert(
 
       <button
         type="button"
-        onClick={() =>
-  setPlanParaPagar("business")
-}
+onClick={() => void contratarPlan("business")}
         disabled={
           procesandoPlan !== null ||
           suscripcion?.plan_slug === "business"
@@ -717,168 +536,6 @@ alert(
     </div>
   </div>
 </div>
-
-{/* MODAL DE PAGO */}
-
-{planParaPagar && (
-  <div
-    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
-    onClick={() => setPlanParaPagar(null)}
-  >
-    <div
-      className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
-            Suscripción
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold text-slate-900">
-            Plan{" "}
-            {planParaPagar === "pro"
-              ? "Pro"
-              : "Business"}
-          </h2>
-
-          <p className="mt-2 text-slate-500">
-            {planParaPagar === "pro"
-              ? "$299 MXN al mes"
-              : "$699 MXN al mes"}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setPlanParaPagar(null)}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-600 transition hover:bg-slate-200"
-          aria-label="Cerrar"
-        >
-          ×
-        </button>
-      </div>
-
-<form
-  id="form-checkout"
-  className="mt-7 space-y-4"
->
-  {/* NÚMERO DE TARJETA */}
-
-  <div>
-    <label className="mb-2 block text-sm font-medium text-slate-700">
-      Número de tarjeta
-    </label>
-
-    <div
-      id="form-checkout__cardNumber"
-      className="h-12 rounded-xl border border-slate-300 bg-white px-4 py-3"
-    />
-  </div>
-
-  {/* VENCIMIENTO + CVV */}
-
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
-        Vencimiento
-      </label>
-
-      <div
-        id="form-checkout__expirationDate"
-        className="h-12 rounded-xl border border-slate-300 bg-white px-4 py-3"
-      />
-    </div>
-
-    <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
-        Código de seguridad
-      </label>
-
-      <div
-        id="form-checkout__securityCode"
-        className="h-12 rounded-xl border border-slate-300 bg-white px-4 py-3"
-      />
-    </div>
-  </div>
-
-  {/* TITULAR */}
-
-  <div>
-    <label
-      htmlFor="form-checkout__cardholderName"
-      className="mb-2 block text-sm font-medium text-slate-700"
-    >
-      Nombre del titular
-    </label>
-
-    <input
-      id="form-checkout__cardholderName"
-      type="text"
-      placeholder="Como aparece en la tarjeta"
-      className="h-12 w-full rounded-xl border border-slate-300 px-4 text-slate-900 outline-none focus:border-indigo-500"
-    />
-  </div>
-
-  {/* EMAIL */}
-
-  <div>
-    <label
-      htmlFor="form-checkout__cardholderEmail"
-      className="mb-2 block text-sm font-medium text-slate-700"
-    >
-      Correo electrónico
-    </label>
-
-    <input
-      id="form-checkout__cardholderEmail"
-      type="email"
-      placeholder="correo@ejemplo.com"
-      className="h-12 w-full rounded-xl border border-slate-300 px-4 text-slate-900 outline-none focus:border-indigo-500"
-    />
-  </div>
-
-  {/* CAMPOS QUE MERCADO PAGO NECESITA */}
-
-  <select
-    id="form-checkout__issuer"
-    className="hidden"
-  />
-
-  <select
-    id="form-checkout__installments"
-    className="hidden"
-  />
-
-  <button
-    id="form-checkout__submit"
-    type="submit"
-    disabled={!mercadoPagoListo}
-    className="mt-2 w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-  >
-    Continuar con el pago
-  </button>
-
-  <progress
-    value="0"
-    className="hidden"
-  />
-</form>
-
-      {!mercadoPagoListo && (
-        <p className="mt-4 text-sm text-amber-700">
-          Preparando Mercado Pago...
-        </p>
-      )}
-
-      <p className="mt-5 text-xs leading-5 text-slate-400">
-        Los datos de tu tarjeta serán procesados por
-        Mercado Pago. Mi Negocio no almacenará el
-        número de tarjeta ni el código de seguridad.
-      </p>
-    </div>
-  </div>
-)}
 
       </div>
     </main>
