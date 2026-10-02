@@ -239,6 +239,28 @@ if (puedeOperarError) {
     return true;
   }
 
+  async function revalidarPuedeOperar() {
+  const {
+    data: puedeOperarData,
+    error: puedeOperarError,
+  } = await supabase.rpc(
+    "has_operational_subscription"
+  );
+
+  if (puedeOperarError) {
+    console.error(
+      "No se pudo revalidar la suscripción:",
+      puedeOperarError.message
+    );
+
+    return;
+  }
+
+  setPuedeOperar(
+    puedeOperarData === true
+  );
+}
+
   async function cargarUsuario() {
     try {
       setCargando(true);
@@ -304,6 +326,32 @@ useEffect(() => {
     subscription.unsubscribe();
   };
 }, []);
+
+useEffect(() => {
+  if (!negocio?.id || !user) {
+    return;
+  }
+
+  const channel = supabase
+    .channel(`subscription-${negocio.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "subscriptions",
+        filter: `business_id=eq.${negocio.id}`,
+      },
+      () => {
+        void revalidarPuedeOperar();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}, [negocio?.id, user?.id]);
 
   async function cerrarSesion() {
     limpiarEstado();
