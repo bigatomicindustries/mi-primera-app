@@ -402,18 +402,22 @@ if (!estadoInterno) {
 // que únicamente podamos modificar la suscripción
 // que ya validamos anteriormente.
 
-const { error: errorActualizacion } =
-  await supabaseAdmin
-    .from("subscriptions")
-    .update({
-      status: estadoInterno,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", suscripcionLocal.id)
-    .eq(
-      "mercadopago_subscription_id",
-      preapproval.id
-    );
+const {
+  data: suscripcionActualizada,
+  error: errorActualizacion,
+} = await supabaseAdmin
+  .from("subscriptions")
+  .update({
+    status: estadoInterno,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("id", suscripcionLocal.id)
+  .eq(
+    "mercadopago_subscription_id",
+    preapproval.id
+  )
+  .select("id")
+  .maybeSingle();
 
 if (errorActualizacion) {
   console.error(
@@ -423,6 +427,25 @@ if (errorActualizacion) {
 
   return NextResponse.json(
     { error: "Error actualizando suscripción" },
+    { status: 500 }
+  );
+}
+
+if (!suscripcionActualizada) {
+  console.error(
+    "Webhook no actualizó ninguna suscripción",
+    {
+      subscriptionId: suscripcionLocal.id,
+      mercadopagoSubscriptionId:
+        preapproval.id,
+    }
+  );
+
+  return NextResponse.json(
+    {
+      error:
+        "La suscripción no pudo ser actualizada",
+    },
     { status: 500 }
   );
 }
