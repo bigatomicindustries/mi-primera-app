@@ -76,7 +76,15 @@ export async function POST(request: NextRequest) {
       const collectorId =
   process.env.MERCADOPAGO_COLLECTOR_ID;
 
-if (!secret || !accessToken || !collectorId) {
+  const applicationId =
+  process.env.MERCADOPAGO_APPLICATION_ID;
+
+if (
+  !secret ||
+  !accessToken ||
+  !collectorId ||
+  !applicationId
+) {
       console.error(
         "Falta configuración de Mercado Pago"
       );
@@ -233,6 +241,33 @@ if (
         preapproval?.collector_id,
     }
   );
+
+  // 6. Validar que la suscripción pertenece
+// a nuestra aplicación de Mercado Pago.
+
+if (
+  String(preapproval?.application_id) !==
+  applicationId
+) {
+  console.error(
+    "Webhook rechazado: application_id no coincide",
+    {
+      mercadopagoSubscriptionId:
+        preapproval?.id,
+      applicationIdRecibido:
+        preapproval?.application_id,
+    }
+  );
+
+  return NextResponse.json(
+    {
+      received: true,
+      ignored: true,
+      reason: "application_mismatch",
+    },
+    { status: 200 }
+  );
+}
 
   return NextResponse.json(
     {
