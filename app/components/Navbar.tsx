@@ -80,8 +80,7 @@ const {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4">
-
+<div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6 sm:py-4">
         {/* MARCA */}
 
         <Link
@@ -99,8 +98,7 @@ const {
 
         {/* NAVEGACIÓN */}
 
-        <nav className="flex items-center gap-1">
-          {opciones.map((opcion) => {
+<nav className="min-w-0 flex flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">          {opciones.map((opcion) => {
             const activo = pathname === opcion.href;
 
             return (
