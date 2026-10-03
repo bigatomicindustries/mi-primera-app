@@ -12,7 +12,28 @@ type MercadoPagoStatus = {
   connected_at?: string | null;
 };
 
+type MercadoPagoTerminal = {
+  id: string;
+  pos_id: number | string | null;
+  store_id: string | null;
+  external_pos_id: string | null;
+  operating_mode: string | null;
+};
+
+type MercadoPagoTerminalsResponse = {
+  terminals: MercadoPagoTerminal[];
+  total: number;
+};
+
 export default function IntegracionesPage() {
+  const [terminales, setTerminales] =
+  useState<MercadoPagoTerminal[]>([]);
+
+const [cargandoTerminales, setCargandoTerminales] =
+  useState(false);
+
+const [errorTerminales, setErrorTerminales] =
+  useState("");
   const router = useRouter();
   const { perfil, negocio } = useAuth();
 
@@ -86,6 +107,11 @@ export default function IntegracionesPage() {
       }
 
       setEstadoMercadoPago(data);
+      if (data.connected) {
+  await cargarTerminales(session.access_token);
+} else {
+  setTerminales([]);
+}
     } catch (error: any) {
       console.error(
         "Error consultando Mercado Pago:",
@@ -100,6 +126,60 @@ export default function IntegracionesPage() {
       setCargandoEstado(false);
     }
   }
+
+        async function cargarTerminales(
+  sessionToken: string
+) {
+  try {
+    setCargandoTerminales(true);
+    setErrorTerminales("");
+
+    const response = await fetch(
+      "/api/mercadopago/terminals",
+      {
+        method: "GET",
+        headers: {
+          Authorization:
+            `Bearer ${sessionToken}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    const data =
+      (await response.json()) as
+        MercadoPagoTerminalsResponse & {
+          error?: string;
+        };
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          "No se pudieron consultar las terminales Point."
+      );
+    }
+
+    setTerminales(
+      Array.isArray(data.terminals)
+        ? data.terminals
+        : []
+    );
+  } catch (error: any) {
+    console.error(
+      "Error consultando terminales Point:",
+      error
+    );
+
+    setTerminales([]);
+
+    setErrorTerminales(
+      error?.message ||
+        "No se pudieron consultar las terminales Point."
+    );
+  } finally {
+    setCargandoTerminales(false);
+  }
+}
 
   async function conectarMercadoPago() {
     try {
