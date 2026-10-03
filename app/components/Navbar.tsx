@@ -32,6 +32,10 @@ export default function Navbar() {
 const {
   perfil,
   negocio,
+  sucursales,
+  sucursalActiva,
+  cambiarSucursal,
+  cargandoSucursales,
   cerrarSesion,
   puedeAdministrar,
   esPlatformAdmin,
@@ -424,7 +428,54 @@ useEffect(() => {
 <p className="text-lg font-bold text-slate-900">
   POS
 </p>
+
+{sucursalActiva && (
+  <p className="max-w-[150px] truncate text-[11px] font-medium text-slate-500">
+    {sucursalActiva.name}
+  </p>
+)}
+
         </Link>
+
+{/* SUCURSAL ACTIVA */}
+
+<div className="min-w-[150px]">
+  {cargandoSucursales ? (
+    <p className="text-xs text-slate-400">
+      Cargando sucursal...
+    </p>
+  ) : sucursalActiva ? (
+    sucursales.length > 1 ? (
+      <select
+        value={sucursalActiva.id}
+        onChange={(e) =>
+          cambiarSucursal(e.target.value)
+        }
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-indigo-400"
+        aria-label="Sucursal activa"
+      >
+        {sucursales.map((sucursal) => (
+          <option
+            key={sucursal.id}
+            value={sucursal.id}
+          >
+            {sucursal.name}
+          </option>
+        ))}
+      </select>
+    ) : (
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+          Sucursal
+        </p>
+
+        <p className="max-w-[160px] truncate text-sm font-semibold text-slate-700">
+          {sucursalActiva.name}
+        </p>
+      </div>
+    )
+  ) : null}
+</div>
 
         {/* NAVEGACIÓN */}
 

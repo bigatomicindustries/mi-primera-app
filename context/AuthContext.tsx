@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -30,19 +31,34 @@ export type Negocio = {
   active: boolean;
 };
 
+export type Sucursal = {
+  id: string;
+  name: string;
+  code: string | null;
+  is_main: boolean;
+  active: boolean;
+};
+
 type AuthContextType = {
   user: User | null;
   perfil: Perfil | null;
   negocio: Negocio | null;
+
+  sucursales: Sucursal[];
+  sucursalActiva: Sucursal | null;
+  cambiarSucursal: (branchId: string) => void;
+
   cargando: boolean;
+  cargandoSucursales: boolean;
+
   negocioSuspendido: boolean;
   puedeOperar: boolean;
 
-esAdmin: boolean;
-esManager: boolean;
-esCajero: boolean;
-puedeAdministrar: boolean;
-esPlatformAdmin: boolean;
+  esAdmin: boolean;
+  esManager: boolean;
+  esCajero: boolean;
+  puedeAdministrar: boolean;
+  esPlatformAdmin: boolean;
 
   cerrarSesion: () => Promise<void>;
 };
@@ -60,11 +76,28 @@ export function AuthProvider({
   const [user, setUser] =
     useState<User | null>(null);
 
+const userRef = useRef<User | null>(null);
+
+useEffect(() => {
+  userRef.current = user;
+}, [user]);
+
   const [perfil, setPerfil] =
     useState<Perfil | null>(null);
 
   const [negocio, setNegocio] =
     useState<Negocio | null>(null);
+
+const [sucursales, setSucursales] =
+  useState<Sucursal[]>([]);
+
+const [sucursalActiva, setSucursalActiva] =
+  useState<Sucursal | null>(null);
+
+const [
+  cargandoSucursales,
+  setCargandoSucursales,
+] = useState(false);
 
   const [cargando, setCargando] =
     useState(true);
@@ -88,9 +121,119 @@ function limpiarEstado() {
   setUser(null);
   setPerfil(null);
   setNegocio(null);
+
+  setSucursales([]);
+  setSucursalActiva(null);
+  setCargandoSucursales(false);
+
   setEsPlatformAdmin(false);
   setPuedeOperar(false);
   setNegocioSuspendido(false);
+}
+
+async function cargarSucursales(
+  businessId: string
+) {
+  try {
+    setCargandoSucursales(true);
+
+    const {
+      data,
+      error,
+    } = await supabase.rpc(
+      "get_my_branches"
+    );
+
+    if (error) {
+      console.error(
+        "No se pudieron cargar las sucursales:",
+        error.message
+      );
+
+      setSucursales([]);
+      setSucursalActiva(null);
+      return;
+    }
+
+    const disponibles =
+      (data ?? []) as Sucursal[];
+
+    setSucursales(disponibles);
+
+    if (disponibles.length === 0) {
+      setSucursalActiva(null);
+      return;
+    }
+
+    // La selección guardada es solamente una
+    // preferencia de interfaz.
+    const storageKey =
+      `active-branch:${businessId}`;
+
+    const branchGuardada =
+      window.localStorage.getItem(
+        storageKey
+      );
+
+    const guardadaValida =
+      disponibles.find(
+        (branch) =>
+          branch.id === branchGuardada
+      );
+
+    const principal =
+      disponibles.find(
+        (branch) => branch.is_main
+      );
+
+    const seleccionada =
+      guardadaValida ??
+      principal ??
+      disponibles[0];
+
+    setSucursalActiva(seleccionada);
+
+    window.localStorage.setItem(
+      storageKey,
+      seleccionada.id
+    );
+  } catch (error) {
+    console.error(
+      "Error inesperado cargando sucursales:",
+      error
+    );
+
+    setSucursales([]);
+    setSucursalActiva(null);
+  } finally {
+    setCargandoSucursales(false);
+  }
+}
+
+function cambiarSucursal(
+  branchId: string
+) {
+  if (!negocio?.id) {
+    return;
+  }
+
+  const nuevaSucursal =
+    sucursales.find(
+      (branch) => branch.id === branchId
+    );
+
+  // No aceptamos una sucursal que no esté
+  // entre las devueltas por get_my_branches().
+  if (!nuevaSucursal) {
+    return;
+  }
+
+  setSucursalActiva(nuevaSucursal);
+
+  window.localStorage.setItem(
+    `active-branch:${negocio.id}`,
+    nuevaSucursal.id
+  );
 }
 
   async function validarUsuario(
@@ -232,11 +375,15 @@ if (puedeOperarError) {
       active: perfilData.active,
     });
 
-    setNegocio(
-      negocioData as Negocio
-    );
+setNegocio(
+  negocioData as Negocio
+);
 
-    return true;
+await cargarSucursales(
+  negocioData.id
+);
+
+return true;
   }
 
   async function revalidarPuedeOperar() {
@@ -296,15 +443,21 @@ useEffect(() => {
   } = supabase.auth.onAuthStateChange(
     (event, session) => {
       // Inicio de sesión real.
-      if (event === "SIGNED_IN" && session?.user) {
-        setCargando(true);
+if (event === "SIGNED_IN" && session?.user) {
+  // Si esta misma sesión ya está cargada,
+  // no volvemos a validar todo el usuario.
+  if (userRef.current?.id === session.user.id) {
+    return;
+  }
 
-        void validarUsuario(session.user).finally(() => {
-          setCargando(false);
-        });
+  setCargando(true);
 
-        return;
-      }
+  void validarUsuario(session.user).finally(() => {
+    setCargando(false);
+  });
+
+  return;
+}
 
       // Cierre de sesión real.
       if (event === "SIGNED_OUT") {
@@ -370,23 +523,32 @@ useEffect(() => {
   const puedeAdministrar =
     esAdmin || esManager;
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        perfil,
-        negocio,
-        cargando,
-        negocioSuspendido,
-        puedeOperar,
-        esAdmin,
-        esManager,
-        esCajero,
-        puedeAdministrar,
-        esPlatformAdmin,
-        cerrarSesion,
-      }}
-    >
+return (
+<AuthContext.Provider
+  value={{
+    user,
+    perfil,
+    negocio,
+
+    sucursales,
+    sucursalActiva,
+    cambiarSucursal,
+
+    cargando,
+    cargandoSucursales,
+
+    negocioSuspendido,
+    puedeOperar,
+
+    esAdmin,
+    esManager,
+    esCajero,
+    puedeAdministrar,
+    esPlatformAdmin,
+
+    cerrarSesion,
+  }}
+>
       {children}
     </AuthContext.Provider>
   );

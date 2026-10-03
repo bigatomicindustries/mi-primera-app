@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { nombreRol } from "@/lib/roles";
+import { useAuth } from "@/context/AuthContext";
 
 type Movimiento = {
   id: string;
@@ -42,29 +43,45 @@ type FiltroTipo =
   | "purchase_cancel";
 
 export default function MovimientosPage() {
-  const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    sucursalActiva,
+    cargandoSucursales,
+  } = useAuth();
+
+  const [movimientos, setMovimientos] = useState<Movimiento[]>([]);  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroTipo, setFiltroTipo] =
     useState<FiltroTipo>("all");
 
-  useEffect(() => {
-    cargarMovimientos();
-  }, []);
+useEffect(() => {
+  if (cargandoSucursales) return;
 
-async function cargarMovimientos() {
+  if (!sucursalActiva?.id) {
+    setMovimientos([]);
+    setLoading(false);
+    return;
+  }
+
+  cargarMovimientos(sucursalActiva.id);
+}, [sucursalActiva?.id, cargandoSucursales]);
+
+async function cargarMovimientos(branchId: string) {
   setLoading(true);
   setError("");
 
   const { data, error } = await supabase.rpc(
-    "get_inventory_movements"
+    "get_inventory_movements",
+    {
+      p_branch_id: branchId,
+    }
   );
 
   if (error) {
     console.error("Error al cargar movimientos:", error);
     setError(error.message);
+    setMovimientos([]);
     setLoading(false);
     return;
   }

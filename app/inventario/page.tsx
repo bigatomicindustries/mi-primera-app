@@ -17,7 +17,11 @@ type Producto = {
 };
 
 export default function InventarioPage() {
-  const { puedeAdministrar } = useAuth();
+const {
+  puedeAdministrar,
+  sucursalActiva,
+  cargandoSucursales,
+} = useAuth();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,24 +62,68 @@ const [cantidadAjuste, setCantidadAjuste] = useState("");
 const [motivoAjuste, setMotivoAjuste] = useState("");
 const [guardandoAjuste, setGuardandoAjuste] = useState(false);
 
-  useEffect(() => {
-    cargarProductos();
-  }, []);
+useEffect(() => {
+  if (cargandoSucursales) return;
+
+  if (!sucursalActiva) {
+    setProductos([]);
+    setLoading(false);
+    return;
+  }
+
+  cargarProductos();
+}, [
+  cargandoSucursales,
+  sucursalActiva?.id,
+]);
 
 async function cargarProductos() {
   setLoading(true);
   setError("");
 
   try {
-    const { data: productosData, error: productosError } =
-      await supabase
-        .from("products")
-        .select(
-          "id, name, barcode, sale_price, stock, minimum_stock, created_at, updated_at"
-        )
-        .order("name", { ascending: true });
+if (!sucursalActiva) {
+  setProductos([]);
+  setLoading(false);
+  return;
+}
 
-    if (productosError) throw productosError;
+const { data: inventarioData, error: inventarioError } =
+  await supabase
+    .from("branch_inventory")
+    .select(`
+      stock,
+      minimum_stock,
+      product:products!inner (
+        id,
+        name,
+        barcode,
+        sale_price,
+        created_at,
+        updated_at
+      )
+    `)
+    .eq("branch_id", sucursalActiva.id)
+    .order("product_id");
+
+if (inventarioError) throw inventarioError;
+
+const productosData = (inventarioData ?? []).map(
+  (item: any) => ({
+    id: item.product.id,
+    name: item.product.name,
+    barcode: item.product.barcode,
+    sale_price: Number(item.product.sale_price),
+    stock: Number(item.stock),
+    minimum_stock: Number(item.minimum_stock),
+    created_at: item.product.created_at,
+    updated_at: item.product.updated_at,
+  })
+);
+
+productosData.sort((a, b) =>
+  a.name.localeCompare(b.name)
+);
 
 if (puedeAdministrar) {
   const {
@@ -168,6 +216,11 @@ async function crearProducto() {
   const stock = Number(nuevoProducto.stock);
   const stockMinimo = Number(nuevoProducto.minimum_stock);
 
+  if (!sucursalActiva) {
+  setError("No hay una sucursal activa seleccionada.");
+  return;
+}
+
   if (!nombre) {
     setError("Escribe el nombre del producto.");
     return;
@@ -197,33 +250,20 @@ async function crearProducto() {
     setGuardandoProducto(true);
     setError("");
 
-const { data, error } = await supabase
-  .from("products")
-  .insert({
-    name: nombre,
-    barcode: nuevoProducto.barcode.trim() || null,
-    cost_price: costo,
-    sale_price: precio,
-    stock: stock,
-    minimum_stock: stockMinimo,
-  })
-  .select(
-    "id, name, barcode, sale_price, stock, minimum_stock, created_at, updated_at"
-  )
-  .single();
+const { error } = await supabase.rpc("create_product", {
+  p_name: nombre,
+  p_barcode: nuevoProducto.barcode.trim() || null,
+  p_cost_price: costo,
+  p_sale_price: precio,
+  p_initial_stock: stock,
+  p_minimum_stock: stockMinimo,
+  p_branch_id: sucursalActiva.id,
+});
 
 if (error) throw error;
 
-const productoCreado: Producto = {
-  ...data,
-  cost_price: costo,
-};
-
-setProductos((actuales) =>
-  [...actuales, productoCreado].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  )
-);
+// Recargar desde branch_inventory para usar la fuente real
+await cargarProductos();
 
     setNuevoProducto({
       name: "",
@@ -269,6 +309,10 @@ function abrirEditor(producto: Producto) {
 
 async function guardarEdicion() {
   if (!productoEditando) return;
+  if (!sucursalActiva) {
+  setError("No hay una sucursal activa seleccionada.");
+  return;
+}
 
   const nombre = productoEditado.name.trim();
   const costo = Number(productoEditado.cost_price);
@@ -299,31 +343,21 @@ async function guardarEdicion() {
     setGuardandoEdicion(true);
     setError("");
 
-    const cambios = {
-      name: nombre,
-      barcode: productoEditado.barcode.trim() || null,
-      cost_price: costo,
-      sale_price: precio,
-      minimum_stock: stockMinimo,
-      updated_at: new Date().toISOString(),
-    };
-
-const { data, error } = await supabase
-  .from("products")
-  .update(cambios)
-  .eq("id", productoEditando.id)
-  .select()
-  .single();
+const { error } = await supabase.rpc("update_product", {
+  p_product_id: productoEditando.id,
+  p_name: nombre,
+  p_barcode: productoEditado.barcode.trim() || null,
+  p_cost_price: costo,
+  p_sale_price: precio,
+  p_minimum_stock: stockMinimo,
+  p_branch_id: sucursalActiva.id,
+});
 
 if (error) throw error;
 
-setProductos((actuales) =>
-  actuales
-    .map((producto) =>
-      producto.id === productoEditando.id ? data : producto
-    )
-    .sort((a, b) => a.name.localeCompare(b.name))
-);
+// Recargar para obtener los datos globales del producto
+// y el inventario específico de la sucursal activa.
+await cargarProductos();
 
     setProductoEditando(null);
 
@@ -347,6 +381,10 @@ setProductos((actuales) =>
 
 async function ajustarStock() {
   if (!productoAjustando) return;
+  if (!sucursalActiva) {
+  setError("No hay una sucursal activa seleccionada.");
+  return;
+}
 
   const cantidad = Number(cantidadAjuste);
 
@@ -378,14 +416,15 @@ async function ajustarStock() {
     setGuardandoAjuste(true);
     setError("");
 
-    const { data, error } = await supabase.rpc(
-      "adjust_inventory_stock",
-      {
-        p_product_id: productoAjustando.id,
-        p_quantity: cantidad,
-        p_note: motivoAjuste.trim(),
-      }
-    );
+const { data, error } = await supabase.rpc(
+  "adjust_inventory_stock",
+  {
+    p_product_id: productoAjustando.id,
+    p_quantity: cantidad,
+    p_note: motivoAjuste.trim(),
+    p_branch_id: sucursalActiva.id,
+  }
+);
 
     if (error) throw error;
 
@@ -421,6 +460,10 @@ async function ajustarStock() {
 
 async function agregarExistencias() {
   if (!productoSeleccionado) return;
+if (!sucursalActiva) {
+  setError("No hay una sucursal activa seleccionada.");
+  return;
+}
 
   const cantidad = Number(cantidadAgregar);
 
@@ -433,14 +476,15 @@ async function agregarExistencias() {
     setGuardandoStock(true);
     setError("");
 
-    const { data, error } = await supabase.rpc(
-      "add_inventory_stock",
-      {
-        p_product_id: productoSeleccionado.id,
-        p_quantity: cantidad,
-        p_note: "Entrada de mercancía desde inventario",
-      }
-    );
+const { data, error } = await supabase.rpc(
+  "add_inventory_stock",
+  {
+    p_product_id: productoSeleccionado.id,
+    p_quantity: cantidad,
+    p_note: "Entrada de mercancía desde inventario",
+    p_branch_id: sucursalActiva.id,
+  }
+);
 
     if (error) {
       throw error;

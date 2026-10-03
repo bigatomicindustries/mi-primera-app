@@ -45,9 +45,11 @@ type MovimientoCaja = {
 };
 
 export default function CajaPage() {
-  const {
+const {
   puedeAdministrar,
+  sucursalActiva,
   cargando: cargandoAuth,
+  cargandoSucursales,
 } = useAuth();
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [items, setItems] = useState<ItemVenta[]>([]);
@@ -71,14 +73,27 @@ const [montoMovimiento, setMontoMovimiento] = useState("");
 const [conceptoMovimiento, setConceptoMovimiento] = useState("");
 const [guardandoMovimiento, setGuardandoMovimiento] = useState(false);
 
-  useEffect(() => {
-    if (cargandoAuth) return;
-    async function cargarCaja() {
+useEffect(() => {
+  if (cargandoAuth || cargandoSucursales) return;
+
+  if (!sucursalActiva) {
+    setSesionCaja(null);
+    setVentas([]);
+    setItems([]);
+    setMovimientosCaja([]);
+    setLoading(false);
+    return;
+  }
+
+  const branchId = sucursalActiva.id;
+
+  async function cargarCaja() {
       setLoading(true);
       setError("");
-      const { data: sesionData, error: sesionError } = await supabase
+const { data: sesionData, error: sesionError } = await supabase
   .from("cash_sessions")
   .select("*")
+.eq("branch_id", branchId)
   .eq("status", "open")
   .maybeSingle();
 
@@ -171,10 +186,24 @@ setItems(
       setLoading(false);
     }
 
-    cargarCaja();
-}, [cargandoAuth, puedeAdministrar]);
+cargarCaja();
+}, [
+  cargandoAuth,
+  cargandoSucursales,
+  puedeAdministrar,
+  sucursalActiva?.id,
+]);
 
 async function abrirCaja() {
+  if (cargandoSucursales) {
+  setError("Espera a que termine de cargar la sucursal");
+  return;
+}
+
+if (!sucursalActiva) {
+  setError("No hay una sucursal activa seleccionada");
+  return;
+}
   const monto = Number(fondoInicial);
 
   if (fondoInicial === "" || Number.isNaN(monto) || monto < 0) {
@@ -190,6 +219,7 @@ const { data, error } = await supabase.rpc(
   "open_cash_session",
   {
     p_opening_amount: monto,
+    p_branch_id: sucursalActiva.id,
   }
 );
 

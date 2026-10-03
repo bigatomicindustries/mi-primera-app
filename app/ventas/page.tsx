@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 
 type Product = {
   id: string;
@@ -16,6 +18,8 @@ type CartItem = Product & {
 };
 
 export default function VentasPage() {
+  const { sucursalActiva, cargandoSucursales } = useAuth();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,31 +40,70 @@ const [ventaCompletada, setVentaCompletada] =
   // CARGAR PRODUCTOS
   // =========================
 
-  useEffect(() => {
-    async function cargarProductos() {
-      setLoading(true);
-      setError("");
-
-      const { data, error } = await supabase
-        .from("products")
-.select(
-  "id, name, stock, sale_price, minimum_stock"
-)
-        .order("name");
-
-      if (error) {
-        console.error(error);
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-
-      setProducts(data ?? []);
-      setLoading(false);
+useEffect(() => {
+  async function cargarProductos() {
+    if (cargandoSucursales) {
+      return;
     }
 
-    cargarProductos();
-  }, []);
+    if (!sucursalActiva) {
+      setProducts([]);
+      setCart([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    const { data, error } = await supabase
+      .from("branch_inventory")
+      .select(`
+        stock,
+        minimum_stock,
+        product:products!inner (
+          id,
+          name,
+          sale_price
+        )
+      `)
+      .eq("branch_id", sucursalActiva.id)
+      .order("product_id");
+
+    if (error) {
+      console.error(error);
+      setError(error.message);
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+
+    const productosSucursal: Product[] = (data ?? []).map((item: any) => ({
+      id: item.product.id,
+      name: item.product.name,
+      sale_price: Number(item.product.sale_price),
+      stock: Number(item.stock),
+      minimum_stock: Number(item.minimum_stock),
+    }));
+
+    productosSucursal.sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
+    setProducts(productosSucursal);
+
+    // El carrito pertenece a la sucursal donde fue creado.
+    // Al cambiar de sucursal, se vacía para evitar mezclar inventarios.
+    setCart([]);
+
+    setLoading(false);
+  }
+
+  cargarProductos();
+}, [
+  cargandoSucursales,
+  sucursalActiva?.id,
+]);
 
   // =========================
   // BUSCADOR
@@ -199,6 +242,11 @@ const efectivoInsuficiente = efectivo < total;
 // =========================
 
 async function cobrarVenta() {
+  if (!sucursalActiva) {
+    alert("No hay una sucursal activa seleccionada");
+    return;
+  }
+
   if (cart.length === 0) {
     alert("El carrito está vacío");
     return;
@@ -219,6 +267,7 @@ const { data, error } = await supabase.rpc("create_sale", {
       : total,
 
   p_payment_method: metodoPago,
+  p_branch_id: sucursalActiva.id,
 });
 
     if (error) {
@@ -259,17 +308,43 @@ setMostrarPago(false);
     setCart([]);
 
     // Actualizar inventario en pantalla
-    const { data: productosActualizados, error: errorProductos } =
-      await supabase
-        .from("products")
-.select(
-  "id, name, stock, sale_price, minimum_stock"
-)
-        .order("name");
+// Actualizar inventario de la sucursal en pantalla
+const { data: inventarioActualizado, error: errorInventario } =
+  await supabase
+    .from("branch_inventory")
+    .select(`
+      stock,
+      minimum_stock,
+      product:products!inner (
+        id,
+        name,
+        sale_price
+      )
+    `)
+    .eq("branch_id", sucursalActiva.id)
+    .order("product_id");
 
-    if (!errorProductos) {
-      setProducts(productosActualizados ?? []);
-    }
+if (!errorInventario) {
+  const productosActualizados: Product[] =
+    (inventarioActualizado ?? []).map((item: any) => ({
+      id: item.product.id,
+      name: item.product.name,
+      sale_price: Number(item.product.sale_price),
+      stock: Number(item.stock),
+      minimum_stock: Number(item.minimum_stock),
+    }));
+
+  productosActualizados.sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  setProducts(productosActualizados);
+} else {
+  console.error(
+    "Error al actualizar inventario:",
+    errorInventario
+  );
+}
   } catch (error) {
     console.error("Error inesperado:", error);
     alert("Ocurrió un error inesperado al procesar la venta");

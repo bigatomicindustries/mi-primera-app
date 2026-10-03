@@ -63,9 +63,11 @@ type MovimientoCaja = {
 };
 
 export default function HistorialCajasPage() {
-  const {
+const {
   puedeAdministrar,
   cargando: cargandoAuth,
+  sucursalActiva,
+  cargandoSucursales,
 } = useAuth();
   const [sesiones, setSesiones] = useState<SesionCaja[]>([]);
   const [ventas, setVentas] = useState<Venta[]>([]);
@@ -79,20 +81,36 @@ export default function HistorialCajasPage() {
 const [ventaSeleccionada, setVentaSeleccionada] =
   useState<Venta | null>(null);
 
-  useEffect(() => {
-    if (cargandoAuth) return;
-    async function cargarHistorial() {
+useEffect(() => {
+  if (cargandoAuth || cargandoSucursales) return;
+
+  if (!sucursalActiva?.id) {
+    setSesiones([]);
+    setVentas([]);
+    setItems([]);
+    setMovimientosCaja([]);
+    setLoading(false);
+    return;
+  }
+
+  const branchId = sucursalActiva.id;
+
+  async function cargarHistorial() {
       try {
         setLoading(true);
         setError("");
 
-        const { data: sesionesData, error: sesionesError } =
-  await supabase.rpc("get_cash_sessions_history");
+const { data: sesionesData, error: sesionesError } =
+  await supabase.rpc("get_cash_sessions_history", {
+    p_branch_id: branchId,
+  });
 
         if (sesionesError) throw sesionesError;
 
 const { data: ventasTodas, error: ventasError } =
-  await supabase.rpc("get_sales_history");
+  await supabase.rpc("get_sales_history", {
+    p_branch_id: branchId,
+  });
 
 if (ventasError) throw ventasError;
 
@@ -211,7 +229,12 @@ setMovimientosCaja(movimientosData ?? []);
     }
 
     cargarHistorial();
-}, [cargandoAuth, puedeAdministrar]);
+}, [
+  cargandoAuth,
+  cargandoSucursales,
+  sucursalActiva?.id,
+  puedeAdministrar,
+]);
 
   const formatoDinero = (cantidad: number) =>
     new Intl.NumberFormat("es-MX", {

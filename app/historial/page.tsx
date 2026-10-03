@@ -34,7 +34,11 @@ type VentaItem = {
 };
 
 export default function HistorialPage() {
-  const { puedeAdministrar } = useAuth();
+const {
+  puedeAdministrar,
+  sucursalActiva,
+  cargandoSucursales,
+} = useAuth();
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -43,14 +47,29 @@ export default function HistorialPage() {
   const [itemsVenta, setItemsVenta] = useState<VentaItem[]>([]);
 
 useEffect(() => {
-  async function cargarVentas() {
+  if (cargandoSucursales) return;
+
+  if (!sucursalActiva?.id) {
+    setVentas([]);
+    setLoading(false);
+    return;
+  }
+
+  async function cargarVentas(branchId: string) {
+    setLoading(true);
+    setError("");
+
     const { data, error } = await supabase.rpc(
-      "get_sales_history"
+      "get_sales_history",
+      {
+        p_branch_id: branchId,
+      }
     );
 
     if (error) {
       console.error(error);
       setError(error.message);
+      setVentas([]);
     } else {
       setVentas((data as Venta[]) ?? []);
     }
@@ -58,8 +77,8 @@ useEffect(() => {
     setLoading(false);
   }
 
-  cargarVentas();
-}, []);
+  void cargarVentas(sucursalActiva.id);
+}, [sucursalActiva?.id, cargandoSucursales]);
 
 async function abrirVenta(venta: Venta) {
   setVentaSeleccionada(venta);

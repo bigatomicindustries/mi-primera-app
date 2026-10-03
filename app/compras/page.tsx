@@ -68,7 +68,12 @@ type SesionCaja = {
 };
 
 export default function ComprasPage() {
-  const { puedeAdministrar, cargando } = useAuth();
+const {
+  puedeAdministrar,
+  cargando,
+  sucursalActiva,
+  cargandoSucursales,
+} = useAuth();
   const [compras, setCompras] = useState<Compra[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -154,6 +159,17 @@ const [notasDevolucion, setNotasDevolucion] =
 
 useEffect(() => {
   if (cargando || !puedeAdministrar) return;
+  if (cargandoSucursales) return;
+
+  if (!sucursalActiva) {
+    setCompras([]);
+    setProductos([]);
+    setSesionCaja(null);
+    setLoading(false);
+    return;
+  }
+
+  const branchId = sucursalActiva.id;
 
   async function cargarCompras() {
     try {
@@ -179,6 +195,7 @@ useEffect(() => {
             created_at
             `
           )
+          .eq("branch_id", branchId)
           .order("created_at", { ascending: false });
 
       if (comprasError) throw comprasError;
@@ -189,91 +206,104 @@ useEffect(() => {
       // CARGAR PRODUCTOS
       // =========================
 
-const {
-  data: productosData,
-  error: productosError,
-} = await supabase
-  .from("products")
-  .select(
-    "id, name, barcode, stock, sale_price"
-  )
-  .order("name");
+      const {
+        data: inventarioData,
+        error: productosError,
+      } = await supabase
+        .from("branch_inventory")
+        .select(`
+          stock,
+          product:products!inner (
+            id,
+            name,
+            barcode,
+            sale_price
+          )
+        `)
+        .eq("branch_id", branchId);
 
-if (productosError) throw productosError;
+      if (productosError) throw productosError;
 
-const {
-  data: costosData,
-  error: costosError,
-} = await supabase.rpc("get_product_costs");
+      const {
+        data: costosData,
+        error: costosError,
+      } = await supabase.rpc("get_product_costs");
 
-if (costosError) throw costosError;
+      if (costosError) throw costosError;
 
-const costosPorProducto = new Map<string, number>(
-  (costosData ?? []).map(
-    (item: {
-      id: string;
-      cost_price: number;
-    }): [string, number] => [
-      item.id,
-      Number(item.cost_price),
-    ]
-  )
-);
+      const costosPorProducto = new Map<string, number>(
+        (costosData ?? []).map(
+          (item: {
+            id: string;
+            cost_price: number;
+          }): [string, number] => [
+            item.id,
+            Number(item.cost_price),
+          ]
+        )
+      );
 
-const productosConCosto: Producto[] =
-  (productosData ?? []).map((producto) => ({
-    ...producto,
-    cost_price:
-      costosPorProducto.get(producto.id) ?? 0,
-  }));
+      const productosConCosto: Producto[] =
+        (inventarioData ?? [])
+          .map((item: any) => ({
+            id: item.product.id,
+            name: item.product.name,
+            barcode: item.product.barcode,
+            stock: Number(item.stock),
+            sale_price: Number(item.product.sale_price),
+            cost_price:
+              costosPorProducto.get(item.product.id) ?? 0,
+          }))
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, "es")
+          );
 
-setProductos(productosConCosto);
+      setProductos(productosConCosto);
 
       // =========================
-// CARGAR PROVEEDORES
-// =========================
+      // CARGAR PROVEEDORES
+      // =========================
 
-const {
-  data: proveedoresData,
-  error: proveedoresError,
-} = await supabase
-  .from("suppliers")
-  .select("id, name, phone, email, notes")
-  .order("name");
+      const {
+        data: proveedoresData,
+        error: proveedoresError,
+      } = await supabase
+        .from("suppliers")
+        .select("id, name, phone, email, notes")
+        .order("name");
 
-if (proveedoresError) throw proveedoresError;
+      if (proveedoresError) throw proveedoresError;
 
-setProveedores(proveedoresData ?? []);
+      setProveedores(proveedoresData ?? []);
 
-// =========================
-// CARGAR CAJA ABIERTA
-// =========================
+      // =========================
+      // CARGAR CAJA ABIERTA
+      // =========================
 
-const {
-  data: sesionCajaData,
-  error: sesionCajaError,
-} = await supabase
-  .from("cash_sessions")
-  .select("id, status, opening_amount, opened_at")
-  .eq("status", "open")
-  .order("opened_at", { ascending: false })
-  .limit(1)
-  .maybeSingle();
+      const {
+        data: sesionCajaData,
+        error: sesionCajaError,
+      } = await supabase
+        .from("cash_sessions")
+        .select(
+          "id, status, opening_amount, opened_at"
+        )
+        .eq("status", "open")
+        .eq("branch_id", branchId)
+        .order("opened_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-if (sesionCajaError) throw sesionCajaError;
+      if (sesionCajaError) throw sesionCajaError;
 
-setSesionCaja(sesionCajaData ?? null);
+      setSesionCaja(sesionCajaData ?? null);
 
-} catch (error: any) {
-  console.log("ERROR COMPLETO:", error);
-  console.log("MENSAJE:", error?.message);
-  console.log("CODIGO:", error?.code);
-  console.log("DETALLES:", error?.details);
-  console.log("HINT:", error?.hint);
-
-  setError(
-    error?.message || "No se pudo cancelar la compra"
-  );
+    } catch (error: any) {
+      console.log("ERROR COMPLETO:", error);
+      console.log("MENSAJE:", error?.message);
+      console.log("CODIGO:", error?.code);
+      console.log("DETALLES:", error?.details);
+      console.log("HINT:", error?.hint);
 
       setError(
         error?.message ||
@@ -284,8 +314,13 @@ setSesionCaja(sesionCajaData ?? null);
     }
   }
 
-cargarCompras();
-}, [cargando, puedeAdministrar]);
+  cargarCompras();
+}, [
+  cargando,
+  puedeAdministrar,
+  cargandoSucursales,
+  sucursalActiva?.id,
+]);
 
   const formatoDinero = (cantidad: number) =>
     new Intl.NumberFormat("es-MX", {
@@ -529,15 +564,31 @@ async function registrarDevolucion() {
     // ACTUALIZAR PRODUCTOS
     // =========================
 
+// =========================
+// ACTUALIZAR PRODUCTOS
+// =========================
+
+if (!sucursalActiva) {
+  throw new Error(
+    "No hay una sucursal activa seleccionada."
+  );
+}
+
 const {
-  data: productosActualizados,
+  data: inventarioActualizado,
   error: productosError,
 } = await supabase
-  .from("products")
-  .select(
-    "id, name, barcode, stock, sale_price"
-  )
-  .order("name");
+  .from("branch_inventory")
+  .select(`
+    stock,
+    product:products!inner (
+      id,
+      name,
+      barcode,
+      sale_price
+    )
+  `)
+  .eq("branch_id", sucursalActiva.id);
 
 if (productosError) {
   throw productosError;
@@ -565,11 +616,19 @@ const costosPorProducto = new Map<string, number>(
 );
 
 const productosConCosto: Producto[] =
-  (productosActualizados ?? []).map((producto) => ({
-    ...producto,
-    cost_price:
-      costosPorProducto.get(producto.id) ?? 0,
-  }));
+  (inventarioActualizado ?? [])
+    .map((item: any) => ({
+      id: item.product.id,
+      name: item.product.name,
+      barcode: item.product.barcode,
+      stock: Number(item.stock),
+      sale_price: Number(item.product.sale_price),
+      cost_price:
+        costosPorProducto.get(item.product.id) ?? 0,
+    }))
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, "es")
+    );
 
 setProductos(productosConCosto);
 
@@ -835,6 +894,13 @@ async function crearProducto() {
     return;
   }
 
+  if (cargandoSucursales) return;
+
+  if (!sucursalActiva) {
+    setError("No hay una sucursal activa seleccionada.");
+    return;
+  }
+
   const costo = Number(costoNuevoProducto || 0);
   const precio = Number(precioNuevoProducto || 0);
 
@@ -847,47 +913,96 @@ async function crearProducto() {
     setGuardandoProducto(true);
     setError("");
 
-const { data, error } = await supabase
-  .from("products")
-  .insert({
-    name: nombre,
-    barcode: codigoNuevoProducto.trim() || null,
-    cost_price: costo,
-    sale_price: precio,
-    stock: 0,
-    minimum_stock: 0,
-  })
-  .select(
-    "id, name, barcode, stock, sale_price"
-  )
-  .single();
+    // =========================
+    // CREAR PRODUCTO
+    // =========================
 
-    if (error) throw error;
-
-    // Lo agregamos al catálogo local
-const productoCreado: Producto = {
-  ...data,
-  cost_price: costo,
-};
-
-setProductos((actuales) =>
-  [...actuales, productoCreado].sort((a, b) =>
-    a.name.localeCompare(b.name, "es")
-  )
+const { data: resultadoProducto, error } = await supabase.rpc(
+  "create_product",
+  {
+    p_name: nombre,
+    p_barcode: codigoNuevoProducto.trim() || null,
+    p_cost_price: costo,
+    p_sale_price: precio,
+    p_initial_stock: 0,
+    p_minimum_stock: 0,
+    p_branch_id: sucursalActiva.id,
+  }
 );
 
-    // Lo agregamos automáticamente a esta compra
+if (error) throw error;
+
+const productoId = resultadoProducto?.product_id;
+
+if (!productoId) {
+  throw new Error(
+    "No se pudo obtener el identificador del producto creado."
+  );
+}
+
+    // =========================
+    // OBTENER PRODUCTO CREADO
+    // =========================
+
+    const {
+      data: inventarioCreado,
+      error: inventarioError,
+    } = await supabase
+      .from("branch_inventory")
+      .select(`
+        stock,
+        product:products!inner (
+          id,
+          name,
+          barcode,
+          sale_price
+        )
+      `)
+      .eq("branch_id", sucursalActiva.id)
+      .eq("product_id", productoId)
+      .single();
+
+    if (inventarioError) throw inventarioError;
+
+    const producto = (inventarioCreado as any).product;
+
+    const productoCreado: Producto = {
+      id: producto.id,
+      name: producto.name,
+      barcode: producto.barcode,
+      stock: Number(inventarioCreado.stock),
+      cost_price: costo,
+      sale_price: Number(producto.sale_price),
+    };
+
+    // =========================
+    // AGREGAR AL CATÁLOGO LOCAL
+    // =========================
+
+    setProductos((actuales) =>
+      [...actuales, productoCreado].sort((a, b) =>
+        a.name.localeCompare(b.name, "es")
+      )
+    );
+
+    // =========================
+    // AGREGAR A LA COMPRA
+    // =========================
+
     setItemsCompra((actuales) => [
       ...actuales,
       {
-        product_id: data.id,
-        name: data.name,
+        product_id: productoCreado.id,
+        name: productoCreado.name,
         quantity: 1,
         unit_cost: costo,
       },
     ]);
 
-    // Limpiamos
+    // =========================
+    // LIMPIAR
+    // =========================
+
     setNombreNuevoProducto("");
     setCodigoNuevoProducto("");
     setCostoNuevoProducto("");
@@ -914,6 +1029,12 @@ setProductos((actuales) =>
 }
 
 async function registrarCompra() {
+if (cargandoSucursales) return;
+
+if (!sucursalActiva) {
+  setError("No hay una sucursal activa seleccionada.");
+  return;
+}
   if (itemsCompra.length === 0) {
     setError("Agrega al menos un producto.");
     return;
@@ -969,8 +1090,7 @@ const numeroCompra =
       unit_cost: Number(item.unit_cost),
     }));
 
-    // Registramos toda la compra
-    const { data: purchaseId, error: rpcError } =
+const { data: purchaseId, error: rpcError } =
   await supabase.rpc("register_purchase", {
     p_number: numeroCompra,
     p_supplier_id: proveedorId || null,
@@ -980,6 +1100,7 @@ const numeroCompra =
       pagarDesdeCaja && sesionCaja
         ? sesionCaja.id
         : null,
+    p_branch_id: sucursalActiva.id,
   });
 
     if (rpcError) throw rpcError;
@@ -1011,16 +1132,24 @@ const numeroCompra =
       ...actuales,
     ]);
 
-    // Actualizamos productos porque cambió stock y costo
+// Actualizamos productos de la sucursal activa
+// porque cambió stock y costo
+
 const {
-  data: productosActualizados,
+  data: inventarioActualizado,
   error: productosError,
 } = await supabase
-  .from("products")
-  .select(
-    "id, name, barcode, stock, sale_price"
-  )
-  .order("name");
+  .from("branch_inventory")
+  .select(`
+    stock,
+    product:products!inner (
+      id,
+      name,
+      barcode,
+      sale_price
+    )
+  `)
+  .eq("branch_id", sucursalActiva.id);
 
 if (productosError) throw productosError;
 
@@ -1044,11 +1173,19 @@ const costosPorProducto = new Map<string, number>(
 );
 
 const productosConCosto: Producto[] =
-  (productosActualizados ?? []).map((producto) => ({
-    ...producto,
-    cost_price:
-      costosPorProducto.get(producto.id) ?? 0,
-  }));
+  (inventarioActualizado ?? [])
+    .map((item: any) => ({
+      id: item.product.id,
+      name: item.product.name,
+      barcode: item.product.barcode,
+      stock: Number(item.stock),
+      sale_price: Number(item.product.sale_price),
+      cost_price:
+        costosPorProducto.get(item.product.id) ?? 0,
+    }))
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, "es")
+    );
 
 setProductos(productosConCosto);
 

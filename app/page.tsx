@@ -35,6 +35,7 @@ type Producto = {
   name: string;
   stock: number;
   minimum_stock: number;
+  branch_id: string;
 };
 
 type SesionCaja = {
@@ -59,23 +60,55 @@ const {
   negocio,
   puedeAdministrar,
   cargando: cargandoAuth,
+  sucursales,
+  sucursalActiva,
+  cargandoSucursales,
 } = useAuth();
+const [vistaDashboard, setVistaDashboard] =
+  useState<"branch" | "all">("branch");
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [items, setItems] = useState<ItemVenta[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [caja, setCaja] = useState<SesionCaja | null>(null);
+  const [cajasSucursales, setCajasSucursales] = useState<
+  Array<{
+    branch_id: string;
+    session: SesionCaja | null;
+  }>
+>([]);
 const [ventaSeleccionada, setVentaSeleccionada] =
   useState<Venta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 const [ventasCaja, setVentasCaja] = useState<Venta[]>([]);
+
 const [movimientosCaja, setMovimientosCaja] =
   useState<MovimientoCaja[]>([]);
 
-useEffect(() => {
-  if (cargandoAuth) return;
+const cajasAbiertas = cajasSucursales.filter(
+  (item) => item.session !== null
+).length;
 
-  async function cargarDashboard() {
+const cajasCerradas =
+  cajasSucursales.length - cajasAbiertas;
+
+useEffect(() => {
+  if (cargandoAuth || cargandoSucursales) return;
+
+if (!sucursalActiva?.id) {
+  setVentas([]);
+  setItems([]);
+  setProductos([]);
+  setCaja(null);
+  setVentasCaja([]);
+  setMovimientosCaja([]);
+  setLoading(false);
+  return;
+}
+
+const branchId = sucursalActiva.id;
+
+async function cargarDashboard() {
     try {
       setLoading(true);
       setError("");
@@ -98,10 +131,38 @@ useEffect(() => {
 
 // VENTAS DE HOY
 
-const { data: ventasTodas, error: ventasError } =
-  await supabase.rpc("get_sales_history");
+let ventasTodas: Venta[] = [];
 
-if (ventasError) throw ventasError;
+if (vistaDashboard === "all" && puedeAdministrar) {
+  const resultados = await Promise.all(
+    sucursales.map((sucursal) =>
+      supabase.rpc("get_sales_history", {
+        p_branch_id: sucursal.id,
+      })
+    )
+  );
+
+  const errorVentas = resultados.find(
+    (resultado) => resultado.error
+  )?.error;
+
+  if (errorVentas) throw errorVentas;
+
+  ventasTodas = resultados.flatMap(
+    (resultado) => (resultado.data as Venta[]) ?? []
+  );
+} else {
+  const { data, error } = await supabase.rpc(
+    "get_sales_history",
+    {
+      p_branch_id: branchId,
+    }
+  );
+
+  if (error) throw error;
+
+  ventasTodas = (data as Venta[]) ?? [];
+}
 
 const ventasHoy = ((ventasTodas as Venta[]) ?? []).filter(
   (venta) => {
@@ -185,36 +246,94 @@ if (ventasHoy.length > 0) {
   setItems([]);
 }
 
-        // INVENTARIO
+// INVENTARIO
 
-        const {
-          data: productosData,
-          error: productosError,
-        } = await supabase
-          .from("products")
-          .select(
-            "id, name, stock, minimum_stock"
-          )
-          .order("stock", { ascending: true });
+let consultaInventario = supabase
+  .from("branch_inventory")
+  .select(`
+    branch_id,
+    stock,
+    minimum_stock,
+    products!inner (
+      id,
+      name
+    )
+  `);
 
-        if (productosError) throw productosError;
+if (!(vistaDashboard === "all" && puedeAdministrar)) {
+  consultaInventario = consultaInventario.eq(
+    "branch_id",
+    branchId
+  );
+}
 
-        setProductos(productosData ?? []);
+const { data: inventarioData, error: productosError } =
+  await consultaInventario;
 
-        // CAJA ABIERTA
+if (productosError) throw productosError;
 
-        const { data: cajaData, error: cajaError } =
-          await supabase
-            .from("cash_sessions")
-            .select(
-              "id, opening_amount, opened_at, status"
-            )
-            .eq("status", "open")
-            .maybeSingle();
+const productosData: Producto[] = (inventarioData ?? []).map(
+  (item) => {
+    const producto = Array.isArray(item.products)
+      ? item.products[0]
+      : item.products;
 
-        if (cajaError) throw cajaError;
+    return {
+      id: producto.id,
+      name: producto.name,
+      stock: Number(item.stock),
+      minimum_stock: Number(item.minimum_stock),
+      branch_id: item.branch_id,
+    };
+  }
+);
 
-        setCaja(cajaData);
+setProductos(productosData);
+
+// CAJA ABIERTA
+
+let cajaData: SesionCaja | null = null;
+
+if (vistaDashboard === "all" && puedeAdministrar) {
+  const resultadosCajas = await Promise.all(
+    sucursales.map(async (sucursal) => {
+      const { data, error } = await supabase
+        .from("cash_sessions")
+        .select(
+          "id, opening_amount, opened_at, status"
+        )
+        .eq("branch_id", sucursal.id)
+        .eq("status", "open")
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return {
+        branch_id: sucursal.id,
+        session: data as SesionCaja | null,
+      };
+    })
+  );
+
+  setCajasSucursales(resultadosCajas);
+  setCaja(null);
+} else {
+  const { data, error } = await supabase
+    .from("cash_sessions")
+    .select(
+      "id, opening_amount, opened_at, status"
+    )
+    .eq("branch_id", branchId)
+    .eq("status", "open")
+    .maybeSingle();
+
+  if (error) throw error;
+
+  cajaData = data as SesionCaja | null;
+
+  setCaja(cajaData);
+  setCajasSucursales([]);
+}
 
         if (cajaData) {
   // Ventas pertenecientes a la caja actualmente abierta
@@ -268,7 +387,13 @@ if (ventasHoy.length > 0) {
 
 cargarDashboard();
 
-}, [cargandoAuth, puedeAdministrar]);
+}, [
+  cargandoAuth,
+  cargandoSucursales,
+  sucursalActiva?.id,
+  puedeAdministrar,
+  vistaDashboard,
+]);
 
   // -----------------------------
   // CÁLCULOS
@@ -350,6 +475,14 @@ const efectivoEsperadoCaja =
         Number(producto.minimum_stock)
     );
 
+    const alertasPorSucursal = sucursales.map((sucursal) => ({
+  id: sucursal.id,
+  name: sucursal.name,
+  cantidad: productosStockBajo.filter(
+    (producto) => producto.branch_id === sucursal.id
+  ).length,
+}));
+
   const formatoDinero = (cantidad: number) =>
     new Intl.NumberFormat("es-MX", {
       style: "currency",
@@ -399,6 +532,35 @@ const efectivoEsperadoCaja =
             <p className="mt-2 text-slate-500">
               Resumen de la operación de hoy.
             </p>
+
+            {puedeAdministrar && (
+  <div className="mt-4 flex flex-wrap items-center gap-2">
+    <button
+      type="button"
+      onClick={() => setVistaDashboard("all")}
+      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+        vistaDashboard === "all"
+          ? "bg-slate-900 text-white"
+          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+      }`}
+    >
+      Todas las sucursales
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setVistaDashboard("branch")}
+      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+        vistaDashboard === "branch"
+          ? "bg-slate-900 text-white"
+          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+      }`}
+    >
+      {sucursalActiva?.name ?? "Sucursal actual"}
+    </button>
+  </div>
+)}
+
           </div>
 
           <Link
@@ -582,94 +744,185 @@ const efectivoEsperadoCaja =
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
 
-          {/* CAJA */}
+{/* CAJA */}
 
-          <div className="rounded-2xl border bg-white p-6">
+<div className="rounded-2xl border bg-white p-6">
+  {vistaDashboard === "all" && puedeAdministrar ? (
+    // VISTA GLOBAL
+    <div>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm text-slate-500">
+            Estado de cajas
+          </p>
 
-            <div className="flex items-start justify-between gap-4">
+          <p className="mt-3 text-2xl font-bold text-slate-900">
+            {cajasAbiertas}{" "}
+            {cajasAbiertas === 1 ? "abierta" : "abiertas"}
+            {" · "}
+            {cajasCerradas}{" "}
+            {cajasCerradas === 1 ? "cerrada" : "cerradas"}
+          </p>
+        </div>
 
-              <div>
-                <p className="text-sm text-slate-500">
-                  Estado de caja
-                </p>
+        <Link
+          href="/historial-cajas"
+          className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          Ver historial →
+        </Link>
+      </div>
 
-                <div className="mt-3 flex items-center gap-3">
-                  <span
-                    className={`h-3 w-3 rounded-full ${
-                      caja
-                        ? "bg-green-500"
-                        : "bg-slate-300"
-                    }`}
-                  />
+      <div className="mt-5 divide-y">
+        {sucursales.map((sucursal) => {
+          const estadoSucursal = cajasSucursales.find(
+            (item) => item.branch_id === sucursal.id
+          );
 
-                  <p className="text-2xl font-bold">
-                    {caja
-                      ? "Caja abierta"
-                      : "Caja cerrada"}
-                  </p>
-                </div>
+          const abierta = Boolean(
+            estadoSucursal?.session
+          );
 
-{caja && (
-  <div className="mt-3">
-    <p className="text-sm text-slate-500">
-      Fondo inicial:{" "}
-      {formatoDinero(
-        Number(caja.opening_amount)
-      )}
-    </p>
+          return (
+            <div
+              key={sucursal.id}
+              className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className={`h-3 w-3 rounded-full ${
+                    abierta
+                      ? "bg-green-500"
+                      : "bg-slate-300"
+                  }`}
+                />
 
-    <p className="mt-1 text-sm text-slate-500">
-Ventas en esta caja:{" "}
-{ventasCaja.length}
-    </p>
-
-    <p className="mt-3 text-sm text-slate-500">
-      Efectivo esperado
-    </p>
-
-    <p className="mt-1 text-2xl font-bold text-slate-900">
-      {formatoDinero(efectivoEsperadoCaja)}
-    </p>
-  </div>
-)}
+                <span className="font-medium text-slate-700">
+                  {sucursal.name}
+                </span>
               </div>
 
-              <Link
-                href="/caja"
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              <span
+                className={`text-sm font-semibold ${
+                  abierta
+                    ? "text-green-600"
+                    : "text-slate-500"
+                }`}
               >
-                Ver caja →
-              </Link>
-
+                {abierta ? "Abierta" : "Cerrada"}
+              </span>
             </div>
+          );
+        })}
+      </div>
+    </div>
+  ) : (
+    // VISTA DE UNA SUCURSAL
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-sm text-slate-500">
+          Estado de caja
+        </p>
 
+        <div className="mt-3 flex items-center gap-3">
+          <span
+            className={`h-3 w-3 rounded-full ${
+              caja
+                ? "bg-green-500"
+                : "bg-slate-300"
+            }`}
+          />
+
+          <p className="text-2xl font-bold">
+            {caja ? "Caja abierta" : "Caja cerrada"}
+          </p>
+        </div>
+
+        {caja && (
+          <div className="mt-3">
+            <p className="text-sm text-slate-500">
+              Fondo inicial:{" "}
+              {formatoDinero(
+                Number(caja.opening_amount)
+              )}
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Ventas en esta caja: {ventasCaja.length}
+            </p>
+
+            <p className="mt-3 text-sm text-slate-500">
+              Efectivo esperado
+            </p>
+
+            <p className="mt-1 text-2xl font-bold text-slate-900">
+              {formatoDinero(efectivoEsperadoCaja)}
+            </p>
           </div>
+        )}
+      </div>
 
+      <Link
+        href="/caja"
+        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+      >
+        Ver caja →
+      </Link>
+    </div>
+  )}
+</div>
           {/* STOCK BAJO */}
 
           <div className="rounded-2xl border bg-white p-6">
 
             <div className="flex items-start justify-between gap-4">
 
-              <div>
-                <p className="text-sm text-slate-500">
-                  Productos con stock bajo
-                </p>
+<div>
+  <p className="text-sm text-slate-500">
+    {vistaDashboard === "all"
+      ? "Alertas de inventario"
+      : "Productos con stock bajo"}
+  </p>
 
-                <p
-                  className={`mt-2 text-3xl font-bold ${
-                    productosStockBajo.length > 0
-                      ? "text-red-600"
-                      : "text-green-600"
-                  }`}
-                >
-                  {productosStockBajo.length}
-                </p>
+  <p
+    className={`mt-2 text-3xl font-bold ${
+      productosStockBajo.length > 0
+        ? "text-red-600"
+        : "text-green-600"
+    }`}
+  >
+    {productosStockBajo.length}
+  </p>
 
-                <p className="mt-1 text-sm text-slate-400">
-                  de {productos.length} productos
-                </p>
-              </div>
+  {vistaDashboard === "all" ? (
+    <div className="mt-3 space-y-1">
+      {alertasPorSucursal.map((sucursal) => (
+        <div
+          key={sucursal.id}
+          className="flex items-center justify-between gap-6 text-sm"
+        >
+          <span className="text-slate-500">
+            {sucursal.name}
+          </span>
+
+          <span
+            className={
+              sucursal.cantidad > 0
+                ? "font-semibold text-red-600"
+                : "font-semibold text-green-600"
+            }
+          >
+            {sucursal.cantidad}
+          </span>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="mt-1 text-sm text-slate-400">
+      de {productos.length} productos
+    </p>
+  )}
+</div>
 
               <Link
                 href="/inventario"
