@@ -26,14 +26,6 @@ type MercadoPagoTerminalsResponse = {
 };
 
 export default function IntegracionesPage() {
-  const [terminales, setTerminales] =
-  useState<MercadoPagoTerminal[]>([]);
-
-const [cargandoTerminales, setCargandoTerminales] =
-  useState(false);
-
-const [errorTerminales, setErrorTerminales] =
-  useState("");
   const router = useRouter();
   const { perfil, negocio } = useAuth();
 
@@ -45,6 +37,15 @@ const [errorTerminales, setErrorTerminales] =
 
   const [estadoMercadoPago, setEstadoMercadoPago] =
     useState<MercadoPagoStatus | null>(null);
+
+  const [terminales, setTerminales] =
+    useState<MercadoPagoTerminal[]>([]);
+
+  const [cargandoTerminales, setCargandoTerminales] =
+    useState(false);
+
+  const [errorTerminales, setErrorTerminales] =
+    useState("");
 
   const [error, setError] =
     useState("");
@@ -107,11 +108,14 @@ const [errorTerminales, setErrorTerminales] =
       }
 
       setEstadoMercadoPago(data);
+
       if (data.connected) {
-  await cargarTerminales(session.access_token);
-} else {
-  setTerminales([]);
-}
+        await cargarTerminales(
+          session.access_token
+        );
+      } else {
+        setTerminales([]);
+      }
     } catch (error: any) {
       console.error(
         "Error consultando Mercado Pago:",
@@ -127,59 +131,59 @@ const [errorTerminales, setErrorTerminales] =
     }
   }
 
-        async function cargarTerminales(
-  sessionToken: string
-) {
-  try {
-    setCargandoTerminales(true);
-    setErrorTerminales("");
+  async function cargarTerminales(
+    sessionToken: string
+  ) {
+    try {
+      setCargandoTerminales(true);
+      setErrorTerminales("");
 
-    const response = await fetch(
-      "/api/mercadopago/terminals",
-      {
-        method: "GET",
-        headers: {
-          Authorization:
-            `Bearer ${sessionToken}`,
-        },
-        cache: "no-store",
+      const response = await fetch(
+        "/api/mercadopago/terminals",
+        {
+          method: "GET",
+          headers: {
+            Authorization:
+              `Bearer ${sessionToken}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      const data =
+        (await response.json()) as
+          MercadoPagoTerminalsResponse & {
+            error?: string;
+          };
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "No se pudieron consultar las terminales Point."
+        );
       }
-    );
 
-    const data =
-      (await response.json()) as
-        MercadoPagoTerminalsResponse & {
-          error?: string;
-        };
+      setTerminales(
+        Array.isArray(data.terminals)
+          ? data.terminals
+          : []
+      );
+    } catch (error: any) {
+      console.error(
+        "Error consultando terminales Point:",
+        error
+      );
 
-    if (!response.ok) {
-      throw new Error(
-        data?.error ||
+      setTerminales([]);
+
+      setErrorTerminales(
+        error?.message ||
           "No se pudieron consultar las terminales Point."
       );
+    } finally {
+      setCargandoTerminales(false);
     }
-
-    setTerminales(
-      Array.isArray(data.terminals)
-        ? data.terminals
-        : []
-    );
-  } catch (error: any) {
-    console.error(
-      "Error consultando terminales Point:",
-      error
-    );
-
-    setTerminales([]);
-
-    setErrorTerminales(
-      error?.message ||
-        "No se pudieron consultar las terminales Point."
-    );
-  } finally {
-    setCargandoTerminales(false);
   }
-}
 
   async function conectarMercadoPago() {
     try {
@@ -305,6 +309,9 @@ const [errorTerminales, setErrorTerminales] =
 
         <div className="mt-10">
           <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+
+            {/* ENCABEZADO MERCADO PAGO */}
+
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
@@ -418,6 +425,147 @@ const [errorTerminales, setErrorTerminales] =
                 )}
               </div>
             </div>
+
+            {/* TERMINALES POINT */}
+
+            {conectado && (
+              <div className="mt-7 border-t border-slate-200 pt-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">
+                      Terminales Point
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Terminales asociadas a esta cuenta
+                      de Mercado Pago.
+                    </p>
+                  </div>
+
+                  {!cargandoTerminales && (
+                    <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      {terminales.length}{" "}
+                      {terminales.length === 1
+                        ? "terminal"
+                        : "terminales"}
+                    </span>
+                  )}
+                </div>
+
+                {cargandoTerminales ? (
+                  <div className="mt-5 rounded-2xl bg-slate-50 p-5">
+                    <p className="text-sm text-slate-500">
+                      Consultando terminales Point...
+                    </p>
+                  </div>
+                ) : errorTerminales ? (
+                  <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-5">
+                    <p className="font-medium text-red-800">
+                      No pudimos consultar las terminales
+                    </p>
+
+                    <p className="mt-1 text-sm text-red-700">
+                      {errorTerminales}
+                    </p>
+                  </div>
+                ) : terminales.length === 0 ? (
+                  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                    <p className="font-medium text-slate-800">
+                      No se encontraron terminales Point
+                    </p>
+
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      No hay terminales Point disponibles
+                      en esta cuenta de Mercado Pago o
+                      todavía no están disponibles para
+                      la integración.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-4">
+                    {terminales.map((terminal) => {
+                      const modo =
+                        terminal.operating_mode
+                          ?.toUpperCase() ||
+                        "DESCONOCIDO";
+
+                      const modoPDV =
+                        modo === "PDV";
+
+                      return (
+                        <div
+                          key={terminal.id}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                        >
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-slate-900">
+                                  Point
+                                </p>
+
+                                <span
+                                  className={
+                                    modoPDV
+                                      ? "rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
+                                      : "rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700"
+                                  }
+                                >
+                                  {modo}
+                                </span>
+                              </div>
+
+                              <p className="mt-3 break-all text-sm text-slate-600">
+                                <span className="font-medium text-slate-700">
+                                  Terminal:
+                                </span>{" "}
+                                {terminal.id}
+                              </p>
+
+                              {terminal.store_id && (
+                                <p className="mt-1 text-sm text-slate-500">
+                                  Store ID:{" "}
+                                  {terminal.store_id}
+                                </p>
+                              )}
+
+                              {terminal.pos_id !== null &&
+                                terminal.pos_id !== undefined && (
+                                  <p className="mt-1 text-sm text-slate-500">
+                                    POS ID:{" "}
+                                    {terminal.pos_id}
+                                  </p>
+                                )}
+
+                              {terminal.external_pos_id && (
+                                <p className="mt-1 text-sm text-slate-500">
+                                  External POS ID:{" "}
+                                  {
+                                    terminal.external_pos_id
+                                  }
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="shrink-0">
+                              {modoPDV ? (
+                                <span className="text-sm font-semibold text-green-700">
+                                  Lista para integrar
+                                </span>
+                              ) : (
+                                <span className="text-sm font-semibold text-amber-700">
+                                  Requiere modo PDV
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
