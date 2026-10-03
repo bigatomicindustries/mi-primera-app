@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+
+type MercadoPagoStatus = {
+  connected: boolean;
+  mercadopago_user_id?: string;
+  expires_at?: string | null;
+  connected_at?: string | null;
+};
 
 export default function IntegracionesPage() {
   const router = useRouter();
@@ -12,27 +19,94 @@ export default function IntegracionesPage() {
   const [conectando, setConectando] =
     useState(false);
 
+  const [cargandoEstado, setCargandoEstado] =
+    useState(true);
+
+  const [estadoMercadoPago, setEstadoMercadoPago] =
+    useState<MercadoPagoStatus | null>(null);
+
   const [error, setError] =
     useState("");
+
+  useEffect(() => {
+    if (!perfil) return;
+
+    if (perfil.role !== "admin") {
+      router.replace("/");
+      return;
+    }
+
+    void cargarEstadoMercadoPago();
+  }, [perfil?.id, perfil?.role, router]);
+
+  async function obtenerSesion() {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (
+      sessionError ||
+      !session?.access_token
+    ) {
+      throw new Error(
+        "Tu sesión ha expirado. Inicia sesión nuevamente."
+      );
+    }
+
+    return session;
+  }
+
+  async function cargarEstadoMercadoPago() {
+    try {
+      setCargandoEstado(true);
+      setError("");
+
+      const session = await obtenerSesion();
+
+      const response = await fetch(
+        "/api/mercadopago/oauth/status",
+        {
+          method: "GET",
+          headers: {
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "No se pudo consultar la integración con Mercado Pago."
+        );
+      }
+
+      setEstadoMercadoPago(data);
+    } catch (error: any) {
+      console.error(
+        "Error consultando Mercado Pago:",
+        error
+      );
+
+      setError(
+        error?.message ||
+          "No se pudo consultar Mercado Pago."
+      );
+    } finally {
+      setCargandoEstado(false);
+    }
+  }
 
   async function conectarMercadoPago() {
     try {
       setConectando(true);
       setError("");
 
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (
-        sessionError ||
-        !session?.access_token
-      ) {
-        throw new Error(
-          "Tu sesión ha expirado. Inicia sesión nuevamente."
-        );
-      }
+      const session = await obtenerSesion();
 
       const response = await fetch(
         "/api/mercadopago/oauth/connect",
@@ -81,6 +155,26 @@ export default function IntegracionesPage() {
     }
   }
 
+  function formatearFecha(
+    fecha?: string | null
+  ) {
+    if (!fecha) return null;
+
+    const date = new Date(fecha);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return new Intl.DateTimeFormat(
+      "es-MX",
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }
+    ).format(date);
+  }
+
   if (!perfil) {
     return (
       <main className="min-h-screen bg-slate-50 px-6 py-12">
@@ -94,10 +188,16 @@ export default function IntegracionesPage() {
   }
 
   if (perfil.role !== "admin") {
-    router.replace("/");
-
     return null;
   }
+
+  const conectado =
+    estadoMercadoPago?.connected === true;
+
+  const fechaConexion =
+    formatearFecha(
+      estadoMercadoPago?.connected_at
+    );
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12">
@@ -125,17 +225,31 @@ export default function IntegracionesPage() {
 
         <div className="mt-10">
           <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-xl">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-xl">
                     💳
                   </div>
 
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900">
-                      Mercado Pago
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-xl font-bold text-slate-900">
+                        Mercado Pago
+                      </h2>
+
+                      {!cargandoEstado && (
+                        conectado ? (
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                            ● Conectado
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                            No conectado
+                          </span>
+                        )
+                      )}
+                    </div>
 
                     <p className="mt-1 text-sm text-slate-500">
                       Cobros con tarjeta desde tu POS
@@ -143,26 +257,86 @@ export default function IntegracionesPage() {
                   </div>
                 </div>
 
-                <p className="mt-5 max-w-xl text-sm leading-6 text-slate-600">
-                  Conecta la cuenta de Mercado Pago de
-                  tu negocio para recibir pagos de tus
-                  clientes directamente desde el punto
-                  de venta.
-                </p>
+                {cargandoEstado ? (
+                  <p className="mt-5 text-sm text-slate-500">
+                    Consultando conexión...
+                  </p>
+                ) : conectado ? (
+                  <div className="mt-5 space-y-2">
+                    <p className="text-sm leading-6 text-slate-600">
+                      La cuenta de Mercado Pago de tu
+                      negocio está vinculada correctamente.
+                    </p>
+
+                    {estadoMercadoPago
+                      ?.mercadopago_user_id && (
+                      <p className="text-sm text-slate-500">
+                        ID de Mercado Pago:{" "}
+                        <span className="font-medium text-slate-700">
+                          {
+                            estadoMercadoPago
+                              .mercadopago_user_id
+                          }
+                        </span>
+                      </p>
+                    )}
+
+                    {fechaConexion && (
+                      <p className="text-sm text-slate-500">
+                        Conectado el:{" "}
+                        <span className="font-medium text-slate-700">
+                          {fechaConexion}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-5 max-w-xl text-sm leading-6 text-slate-600">
+                    Conecta la cuenta de Mercado Pago de
+                    tu negocio para recibir pagos de tus
+                    clientes directamente desde el punto
+                    de venta.
+                  </p>
+                )}
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  void conectarMercadoPago()
-                }
-                disabled={conectando}
-                className="shrink-0 rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {conectando
-                  ? "Conectando..."
-                  : "Conectar Mercado Pago"}
-              </button>
+              <div className="shrink-0">
+                {cargandoEstado ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="rounded-xl bg-slate-200 px-5 py-3 font-semibold text-slate-500"
+                  >
+                    Consultando...
+                  </button>
+                ) : conectado ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void conectarMercadoPago()
+                    }
+                    disabled={conectando}
+                    className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    {conectando
+                      ? "Abriendo..."
+                      : "Volver a autorizar"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void conectarMercadoPago()
+                    }
+                    disabled={conectando}
+                    className="rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {conectando
+                      ? "Conectando..."
+                      : "Conectar Mercado Pago"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
