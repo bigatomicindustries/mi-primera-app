@@ -15,10 +15,16 @@ type Empleado = {
   active: boolean;
   created_at: string;
   updated_at: string;
+  branch_ids: string[];
 };
 
 export default function UsuariosPage() {
-  const { user, perfil } = useAuth();
+const {
+  user,
+  sucursales,
+  sucursalActiva,
+  perfil,
+} = useAuth();
 const router = useRouter();
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +38,20 @@ const [mostrarNuevoEmpleado, setMostrarNuevoEmpleado] =
 const [nuevoNombre, setNuevoNombre] = useState("");
 const [nuevoEmail, setNuevoEmail] = useState("");
 const [nuevaPassword, setNuevaPassword] = useState("");
+const [nuevasSucursales, setNuevasSucursales] =
+  useState<string[]>([]);
 const [nuevoRol, setNuevoRol] = useState<Rol>("cashier");
 
 const [creandoEmpleado, setCreandoEmpleado] =
+  useState(false);
+
+const [empleadoSucursales, setEmpleadoSucursales] =
+  useState<Empleado | null>(null);
+
+const [sucursalesEditadas, setSucursalesEditadas] =
+  useState<string[]>([]);
+
+const [guardandoSucursales, setGuardandoSucursales] =
   useState(false);
 
 useEffect(() => {
@@ -103,26 +120,20 @@ useEffect(() => {
       return;
     }
 
-    const respuesta = await fetch("/api/employees", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        full_name: nombre,
-        email,
-        password: nuevaPassword,
-        role: nuevoRol,
-
-        body: JSON.stringify({
-  full_name: nuevoNombre,
-  email: nuevoEmail,
-  password: nuevaPassword,
-  role: nuevoRol,
-}),
-      }),
-    });
+const respuesta = await fetch("/api/employees", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${session.access_token}`,
+  },
+  body: JSON.stringify({
+    full_name: nombre,
+    email,
+    password: nuevaPassword,
+    role: nuevoRol,
+    branch_ids: nuevasSucursales,
+  }),
+});
 
     const resultado = await respuesta.json();
 
@@ -245,6 +256,57 @@ useEffect(() => {
     setProcesandoId(null);
   }
 
+async function guardarSucursalesEmpleado() {
+  if (!empleadoSucursales) return;
+
+  if (sucursalesEditadas.length === 0) {
+    setError("Selecciona al menos una sucursal para el empleado.");
+    return;
+  }
+
+  try {
+    setGuardandoSucursales(true);
+    setError("");
+    setMensaje("");
+
+    const { error } = await supabase.rpc(
+      "set_employee_branches",
+      {
+        p_employee_id: empleadoSucursales.id,
+        p_branch_ids: sucursalesEditadas,
+      }
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    const nombreEmpleado =
+      empleadoSucursales.full_name;
+
+    await cargarEmpleados();
+
+    setEmpleadoSucursales(null);
+    setSucursalesEditadas([]);
+
+    setMensaje(
+      `Las sucursales de ${nombreEmpleado} se actualizaron correctamente.`
+    );
+  } catch (error: any) {
+    console.error(
+      "Error actualizando sucursales del empleado:",
+      error
+    );
+
+    setError(
+      error?.message ||
+        "No se pudieron actualizar las sucursales."
+    );
+  } finally {
+    setGuardandoSucursales(false);
+  }
+}
+
   if (!perfil || perfil.role !== "admin") {
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12">
@@ -292,11 +354,16 @@ useEffect(() => {
 
   <button
     type="button"
-    onClick={() => {
-      setError("");
-      setMensaje("");
-      setMostrarNuevoEmpleado(true);
-    }}
+onClick={() => {
+  setError("");
+  setMensaje("");
+
+  setNuevasSucursales(
+    sucursalActiva ? [sucursalActiva.id] : []
+  );
+
+  setMostrarNuevoEmpleado(true);
+}}
     className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700"
   >
     + Nuevo empleado
@@ -369,6 +436,10 @@ useEffect(() => {
                   <th className="px-6 py-4">
                     Rol
                   </th>
+
+                  <th className="px-4 py-3 text-left">
+  Sucursales
+</th>
 
                   <th className="px-6 py-4">
                     Estado
@@ -453,7 +524,55 @@ useEffect(() => {
                         </select>
                       </td>
 
-                      {/* ESTADO */}
+                      <td className="px-4 py-4">
+  <div className="flex max-w-xs flex-wrap gap-2">
+    {empleado.branch_ids?.length > 0 ? (
+      empleado.branch_ids.map((branchId) => {
+        const sucursal = sucursales.find(
+          (item) => item.id === branchId
+        );
+
+        if (!sucursal) return null;
+
+        return (
+          <span
+            key={branchId}
+            className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700"
+          >
+            {sucursal.name}
+          </span>
+        );
+      })
+    ) : (
+      <span className="text-sm text-slate-400">
+        Sin sucursal
+      </span>
+    )}
+
+</div>
+
+{!esYo && (
+  <button
+    type="button"
+    disabled={procesando}
+    onClick={() => {
+      setError("");
+      setMensaje("");
+
+      setEmpleadoSucursales(empleado);
+
+      setSucursalesEditadas(
+        empleado.branch_ids ?? []
+      );
+    }}
+    className="mt-3 text-xs font-semibold text-indigo-600 transition hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    Editar sucursales
+  </button>
+)}
+</td>
+
+{/* ESTADO */}
 
                       <td className="px-6 py-5">
                         {empleado.active ? (
@@ -600,6 +719,63 @@ useEffect(() => {
         <option value="admin">Administrador</option>
       </select>
 
+<div>
+  <label className="mb-2 block text-sm font-semibold text-slate-700">
+    Sucursales
+  </label>
+
+  <div className="space-y-2 rounded-xl border border-slate-200 p-3">
+    {sucursales.map((sucursal) => {
+      const seleccionada =
+        nuevasSucursales.includes(sucursal.id);
+
+      return (
+        <label
+          key={sucursal.id}
+          className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50"
+        >
+          <input
+            type="checkbox"
+            checked={seleccionada}
+            disabled={creandoEmpleado}
+            onChange={() => {
+              setNuevasSucursales(
+                seleccionada
+                  ? nuevasSucursales.filter(
+                      (id) => id !== sucursal.id
+                    )
+                  : [
+                      ...nuevasSucursales,
+                      sucursal.id,
+                    ]
+              );
+            }}
+            className="h-4 w-4"
+          />
+
+          <div>
+            <p className="text-sm font-semibold text-slate-800">
+              {sucursal.name}
+            </p>
+
+            {sucursal.is_main && (
+              <p className="text-xs text-slate-500">
+                Sucursal principal
+              </p>
+            )}
+          </div>
+        </label>
+      );
+    })}
+  </div>
+
+  {nuevasSucursales.length === 0 && (
+    <p className="mt-2 text-xs text-red-600">
+      Selecciona al menos una sucursal.
+    </p>
+  )}
+</div>
+
       <button
         type="button"
         onClick={crearEmpleado}
@@ -619,6 +795,113 @@ useEffect(() => {
       >
         Cancelar
       </button>
+    </div>
+  </div>
+)}
+
+{/* MODAL EDITAR SUCURSALES */}
+
+{empleadoSucursales && (
+  <div
+    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+    onClick={() => {
+      if (!guardandoSucursales) {
+        setEmpleadoSucursales(null);
+        setSucursalesEditadas([]);
+      }
+    }}
+  >
+    <div
+      className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <h2 className="text-2xl font-bold text-slate-900">
+        Editar sucursales
+      </h2>
+
+      <p className="mt-2 text-sm text-slate-500">
+        Selecciona las sucursales a las que tendrá acceso{" "}
+        <span className="font-semibold text-slate-700">
+          {empleadoSucursales.full_name}
+        </span>
+        .
+      </p>
+
+      <div className="mt-6 space-y-2">
+        {sucursales.map((sucursal) => {
+          const seleccionada =
+            sucursalesEditadas.includes(sucursal.id);
+
+          return (
+            <label
+              key={sucursal.id}
+              className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 transition hover:bg-slate-50"
+            >
+              <input
+                type="checkbox"
+                checked={seleccionada}
+                disabled={guardandoSucursales}
+                onChange={() => {
+                  setSucursalesEditadas((actuales) =>
+                    seleccionada
+                      ? actuales.filter(
+                          (id) => id !== sucursal.id
+                        )
+                      : [...actuales, sucursal.id]
+                  );
+                }}
+                className="h-4 w-4"
+              />
+
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800">
+                  {sucursal.name}
+                </p>
+
+                {sucursal.is_main && (
+                  <p className="text-xs text-slate-500">
+                    Sucursal principal
+                  </p>
+                )}
+              </div>
+            </label>
+          );
+        })}
+      </div>
+
+      {sucursalesEditadas.length === 0 && (
+        <p className="mt-3 text-sm text-red-600">
+          El empleado debe tener al menos una sucursal.
+        </p>
+      )}
+
+      <div className="mt-7 flex gap-3">
+        <button
+          type="button"
+          disabled={guardandoSucursales}
+          onClick={() => {
+            setEmpleadoSucursales(null);
+            setSucursalesEditadas([]);
+          }}
+          className="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          disabled={
+            guardandoSucursales ||
+            sucursalesEditadas.length === 0
+          }
+          onClick={() => void guardarSucursalesEmpleado()}
+          className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {guardandoSucursales
+            ? "Guardando..."
+            : "Guardar cambios"}
+        </button>
+      </div>
     </div>
   </div>
 )}

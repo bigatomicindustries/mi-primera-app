@@ -33,6 +33,14 @@ type VentaItem = {
   subtotal: number;
 };
 
+type SucursalHistorial = {
+  id: string;
+  name: string;
+  code: string | null;
+  is_main: boolean;
+  active: boolean;
+};
+
 export default function HistorialPage() {
 const {
   puedeAdministrar,
@@ -42,43 +50,91 @@ const {
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sucursalesHistorial, setSucursalesHistorial] =
+  useState<SucursalHistorial[]>([]);
+const [sucursalHistorialId, setSucursalHistorialId] =
+  useState<string>("");
   const [ventaSeleccionada, setVentaSeleccionada] =
   useState<Venta | null>(null);
   const [itemsVenta, setItemsVenta] = useState<VentaItem[]>([]);
 
-useEffect(() => {
-  if (cargandoSucursales) return;
+async function cargarVentas(branchId: string) {
+  setLoading(true);
+  setError("");
 
-  if (!sucursalActiva?.id) {
+  const { data, error } = await supabase.rpc(
+    "get_sales_history",
+    {
+      p_branch_id: branchId,
+    }
+  );
+
+  if (error) {
+    console.error("Error cargando ventas:", error);
+    setError(error.message);
     setVentas([]);
     setLoading(false);
     return;
   }
 
-  async function cargarVentas(branchId: string) {
+  setVentas((data as Venta[]) ?? []);
+  setLoading(false);
+}
+
+useEffect(() => {
+  if (cargandoSucursales) return;
+
+  async function cargarSucursalesHistorial() {
     setLoading(true);
     setError("");
 
     const { data, error } = await supabase.rpc(
-      "get_sales_history",
-      {
-        p_branch_id: branchId,
-      }
+      "get_my_branches_history"
     );
 
     if (error) {
-      console.error(error);
+      console.error(
+        "Error cargando sucursales históricas:",
+        error
+      );
+
       setError(error.message);
+      setSucursalesHistorial([]);
+      setSucursalHistorialId("");
       setVentas([]);
-    } else {
-      setVentas((data as Venta[]) ?? []);
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    const sucursales =
+      (data as SucursalHistorial[]) ?? [];
+
+    setSucursalesHistorial(sucursales);
+
+    if (sucursales.length === 0) {
+      setSucursalHistorialId("");
+      setVentas([]);
+      setLoading(false);
+      return;
+    }
+
+    const sucursalInicial =
+      sucursales.find(
+        (sucursal) =>
+          sucursal.id === sucursalActiva?.id
+      ) ??
+      sucursales.find(
+        (sucursal) => sucursal.is_main
+      ) ??
+      sucursales[0];
+
+    setSucursalHistorialId(sucursalInicial.id);
+
+    await cargarVentas(sucursalInicial.id);
   }
 
-  void cargarVentas(sucursalActiva.id);
-}, [sucursalActiva?.id, cargandoSucursales]);
+  void cargarSucursalesHistorial();
+}, [cargandoSucursales]);
 
 async function abrirVenta(venta: Venta) {
   setVentaSeleccionada(venta);
@@ -197,6 +253,37 @@ async function abrirVenta(venta: Venta) {
           <p className="mt-2 text-slate-500">
             Consulta las ventas realizadas
           </p>
+
+<div className="mt-5">
+  <label className="mb-2 block text-sm font-medium text-slate-700">
+    Sucursal
+  </label>
+
+  <select
+    value={sucursalHistorialId}
+    onChange={async (e) => {
+      const branchId = e.target.value;
+
+      setSucursalHistorialId(branchId);
+      setVentaSeleccionada(null);
+      setItemsVenta([]);
+
+      await cargarVentas(branchId);
+    }}
+    className="w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-indigo-500 md:max-w-sm"
+  >
+    {sucursalesHistorial.map((sucursal) => (
+      <option
+        key={sucursal.id}
+        value={sucursal.id}
+      >
+        {sucursal.name}
+        {!sucursal.active ? " (Inactiva)" : ""}
+      </option>
+    ))}
+  </select>
+</div>
+
         </div>
 
         {loading && (

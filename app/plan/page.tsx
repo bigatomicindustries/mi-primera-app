@@ -173,64 +173,6 @@ setSuscripcion(data[0]);
   }
 }
 
-async function probarLecturaCompraAjena() {
-  const { data, error } = await supabase
-    .from("purchases")
-    .select(
-      "id, number, status, total, business_id"
-    )
-    .eq(
-      "id",
-      "15cb598f-889d-4140-b970-2896ab9facc6"
-    );
-
-  console.log("PRUEBA COMPRA AJENA:", {
-    data,
-    error,
-  });
-
-  alert(
-    JSON.stringify(
-      {
-        data,
-        error: error?.message || null,
-      },
-      null,
-      2
-    )
-  );
-
-}
-
-async function probarCancelarCompraAjena() {
-  const { data, error } = await supabase.rpc(
-    "cancel_purchase",
-    {
-      p_purchase_id:
-        "15cb598f-889d-4140-b970-2896ab9facc6",
-    }
-  );
-
-  console.log(
-    "PRUEBA CANCELAR COMPRA AJENA:",
-    {
-      data,
-      error,
-    }
-  );
-
-  alert(
-    JSON.stringify(
-      {
-        data,
-        error: error?.message || null,
-      },
-      null,
-      2
-    )
-  );
-}
-
 async function contratarPlan(
   plan: "pro" | "business"
 ) {

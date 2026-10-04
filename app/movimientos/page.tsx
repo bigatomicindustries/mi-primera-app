@@ -42,6 +42,14 @@ type FiltroTipo =
   | "return"
   | "purchase_cancel";
 
+type SucursalHistorial = {
+  id: string;
+  name: string;
+  code: string | null;
+  is_main: boolean;
+  active: boolean;
+};
+
 export default function MovimientosPage() {
   const {
     sucursalActiva,
@@ -51,6 +59,13 @@ export default function MovimientosPage() {
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+
+const [sucursalesHistorial, setSucursalesHistorial] =
+  useState<SucursalHistorial[]>([]);
+
+const [sucursalHistorialId, setSucursalHistorialId] =
+  useState<string>("");
+
   const [busqueda, setBusqueda] = useState("");
   const [filtroTipo, setFiltroTipo] =
     useState<FiltroTipo>("all");
@@ -58,14 +73,57 @@ export default function MovimientosPage() {
 useEffect(() => {
   if (cargandoSucursales) return;
 
-  if (!sucursalActiva?.id) {
-    setMovimientos([]);
-    setLoading(false);
-    return;
+  async function cargarSucursalesHistorial() {
+    setLoading(true);
+    setError("");
+
+    const { data, error } = await supabase.rpc(
+      "get_my_branches_history"
+    );
+
+    if (error) {
+      console.error(
+        "Error cargando sucursales históricas:",
+        error
+      );
+
+      setError(error.message);
+      setSucursalesHistorial([]);
+      setSucursalHistorialId("");
+      setMovimientos([]);
+      setLoading(false);
+      return;
+    }
+
+    const sucursales =
+      (data as SucursalHistorial[]) ?? [];
+
+    setSucursalesHistorial(sucursales);
+
+    if (sucursales.length === 0) {
+      setSucursalHistorialId("");
+      setMovimientos([]);
+      setLoading(false);
+      return;
+    }
+
+    const sucursalInicial =
+      sucursales.find(
+        (sucursal) =>
+          sucursal.id === sucursalActiva?.id
+      ) ??
+      sucursales.find(
+        (sucursal) => sucursal.is_main
+      ) ??
+      sucursales[0];
+
+    setSucursalHistorialId(sucursalInicial.id);
+
+    await cargarMovimientos(sucursalInicial.id);
   }
 
-  cargarMovimientos(sucursalActiva.id);
-}, [sucursalActiva?.id, cargandoSucursales]);
+  cargarSucursalesHistorial();
+}, [cargandoSucursales]);
 
 async function cargarMovimientos(branchId: string) {
   setLoading(true);
@@ -259,6 +317,30 @@ function nombreTipo(tipo: Movimiento["movement_type"]) {
         {/* FILTROS */}
 
         <div className="mt-8 flex flex-col gap-4 lg:flex-row">
+
+<select
+  value={sucursalHistorialId}
+  onChange={async (e) => {
+    const branchId = e.target.value;
+
+    setSucursalHistorialId(branchId);
+    setBusqueda("");
+    setFiltroTipo("all");
+
+    await cargarMovimientos(branchId);
+  }}
+  className="rounded-xl border bg-white px-5 py-4 outline-none focus:border-indigo-500"
+>
+  {sucursalesHistorial.map((sucursal) => (
+    <option
+      key={sucursal.id}
+      value={sucursal.id}
+    >
+      {sucursal.name}
+      {!sucursal.active ? " (Inactiva)" : ""}
+    </option>
+  ))}
+</select>
 
           <input
             type="text"

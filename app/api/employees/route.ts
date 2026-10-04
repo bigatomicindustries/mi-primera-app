@@ -128,6 +128,18 @@ if (
 
     const role = body.role as RolEmpleado;
 
+    const branchIds = Array.isArray(body.branch_ids)
+  ? [
+      ...new Set(
+        body.branch_ids.filter(
+          (id: unknown): id is string =>
+            typeof id === "string" &&
+            id.trim().length > 0
+        )
+      ),
+    ]
+  : [];
+
     if (!fullName) {
       return NextResponse.json(
         { error: "El nombre es obligatorio." },
@@ -163,6 +175,16 @@ if (
       );
     }
 
+if (branchIds.length === 0) {
+  return NextResponse.json(
+    {
+      error:
+        "Selecciona al menos una sucursal para el empleado.",
+    },
+    { status: 400 }
+  );
+}
+
     // 5. Cliente administrativo.
     // Esta clave vive solamente en el servidor.
     const supabaseAdmin = createClient(
@@ -176,6 +198,44 @@ if (
       }
     );
 
+
+const {
+  data: sucursalesValidas,
+  error: sucursalesError,
+} = await supabaseAdmin
+  .from("branches")
+  .select("id")
+  .eq("business_id", perfil.business_id)
+  .eq("active", true)
+  .in("id", branchIds);
+
+if (sucursalesError) {
+  console.error(
+    "Error validando sucursales:",
+    sucursalesError
+  );
+
+  return NextResponse.json(
+    {
+      error:
+        "No se pudieron validar las sucursales seleccionadas.",
+    },
+    { status: 500 }
+  );
+}
+
+if (
+  !sucursalesValidas ||
+  sucursalesValidas.length !== branchIds.length
+) {
+  return NextResponse.json(
+    {
+      error:
+        "Una o más sucursales seleccionadas no son válidas.",
+    },
+    { status: 400 }
+  );
+}
     // =====================================================
 // 6. VERIFICAR LÍMITE DE USUARIOS DEL PLAN
 // =====================================================
@@ -351,16 +411,55 @@ if (totalUsuarios >= plan.max_users) {
       );
     }
 
+const asignaciones = branchIds.map(
+  (branchId) => ({
+    profile_id: nuevoUsuarioId,
+    branch_id: branchId,
+    business_id: perfil.business_id,
+  })
+);
+
+const { error: branchesError } =
+  await supabaseAdmin
+    .from("profile_branches")
+    .insert(asignaciones);
+
+if (branchesError) {
+  console.error(
+    "Error asignando sucursales:",
+    branchesError
+  );
+
+  // Evitamos dejar datos incompletos.
+  await supabaseAdmin
+    .from("profiles")
+    .delete()
+    .eq("id", nuevoUsuarioId);
+
+  await supabaseAdmin.auth.admin.deleteUser(
+    nuevoUsuarioId
+  );
+
+  return NextResponse.json(
+    {
+      error:
+        "No se pudieron asignar las sucursales al empleado.",
+    },
+    { status: 500 }
+  );
+}
+
     // 8. Respuesta segura: nunca devolvemos la contraseña.
     return NextResponse.json(
       {
-        employee: {
-          id: nuevoUsuarioId,
-          full_name: fullName,
-          email,
-          role,
-          active: true,
-        },
+employee: {
+  id: nuevoUsuarioId,
+  full_name: fullName,
+  email,
+  role,
+  active: true,
+  branch_ids: branchIds,
+},
       },
       { status: 201 }
     );

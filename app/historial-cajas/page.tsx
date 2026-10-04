@@ -62,6 +62,14 @@ type MovimientoCaja = {
   user_role: "admin" | "manager" | "cashier" | null;
 };
 
+type SucursalHistorial = {
+  id: string;
+  name: string;
+  code: string | null;
+  is_main: boolean;
+  active: boolean;
+};
+
 export default function HistorialCajasPage() {
 const {
   puedeAdministrar,
@@ -73,6 +81,11 @@ const {
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sucursalesHistorial, setSucursalesHistorial] =
+  useState<SucursalHistorial[]>([]);
+
+const [sucursalHistorialId, setSucursalHistorialId] =
+  useState<string>("");
   const [sesionSeleccionada, setSesionSeleccionada] =
   useState<SesionCaja | null>(null);
   const [items, setItems] = useState<ItemVenta[]>([]);
@@ -81,158 +94,213 @@ const {
 const [ventaSeleccionada, setVentaSeleccionada] =
   useState<Venta | null>(null);
 
-useEffect(() => {
-  if (cargandoAuth || cargandoSucursales) return;
+async function cargarHistorial(branchId: string) {
+  try {
+    setLoading(true);
+    setError("");
 
-  if (!sucursalActiva?.id) {
+    const { data: sesionesData, error: sesionesError } =
+      await supabase.rpc("get_cash_sessions_history", {
+        p_branch_id: branchId,
+      });
+
+    if (sesionesError) throw sesionesError;
+
+    const { data: ventasTodas, error: ventasError } =
+      await supabase.rpc("get_sales_history", {
+        p_branch_id: branchId,
+      });
+
+    if (ventasError) throw ventasError;
+
+    const ventasData = ((ventasTodas as Venta[]) ?? []).filter(
+      (venta) => venta.cash_session_id !== null
+    );
+
+    const idsVentas = ventasData.map(
+      (venta) => venta.id
+    );
+
+    let itemsData: ItemVenta[] = [];
+
+    if (idsVentas.length > 0) {
+      if (puedeAdministrar) {
+        const { data: itemsSinCosto, error: itemsError } =
+          await supabase
+            .from("sale_items")
+            .select(
+              "sale_id, product_id, name, quantity, unit_price"
+            )
+            .in("sale_id", idsVentas);
+
+        if (itemsError) throw itemsError;
+
+        const { data: costosData, error: costosError } =
+          await supabase.rpc("get_sale_item_costs", {
+            p_sale_ids: idsVentas,
+          });
+
+        if (costosError) throw costosError;
+
+        const costosPorVentaProducto =
+          new Map<string, number>();
+
+        (costosData ?? []).forEach(
+          (item: {
+            sale_id: string;
+            product_id: string | null;
+            unit_cost: number;
+          }) => {
+            const clave =
+              `${item.sale_id}:${item.product_id ?? "null"}`;
+
+            costosPorVentaProducto.set(
+              clave,
+              Number(item.unit_cost)
+            );
+          }
+        );
+
+        itemsData = (itemsSinCosto ?? []).map((item) => ({
+          ...item,
+          unit_cost:
+            costosPorVentaProducto.get(
+              `${item.sale_id}:${item.product_id ?? "null"}`
+            ) ?? 0,
+        }));
+      } else {
+        const { data, error: itemsError } =
+          await supabase
+            .from("sale_items")
+            .select(
+              "sale_id, product_id, name, quantity, unit_price"
+            )
+            .in("sale_id", idsVentas);
+
+        if (itemsError) throw itemsError;
+
+        itemsData = (data ?? []).map((item) => ({
+          ...item,
+          unit_cost: 0,
+        }));
+      }
+    }
+
+    const resultadosMovimientos = await Promise.all(
+      ((sesionesData as SesionCaja[]) ?? []).map(
+        (sesion) =>
+          supabase.rpc("get_cash_movements", {
+            p_cash_session_id: sesion.id,
+          })
+      )
+    );
+
+    const movimientosData: MovimientoCaja[] = [];
+
+    for (const resultado of resultadosMovimientos) {
+      if (resultado.error) {
+        throw resultado.error;
+      }
+
+      movimientosData.push(
+        ...((resultado.data as MovimientoCaja[]) ?? [])
+      );
+    }
+
+    movimientosData.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() -
+        new Date(a.created_at).getTime()
+    );
+
+    setSesiones(
+      (sesionesData as SesionCaja[]) ?? []
+    );
+    setVentas(ventasData);
+    setItems(itemsData);
+    setMovimientosCaja(movimientosData);
+  } catch (error: any) {
+    console.error(
+      "Error al cargar historial de cajas:",
+      error
+    );
+
+    setError(
+      error?.message ||
+        "No se pudo cargar el historial de cajas."
+    );
+
     setSesiones([]);
     setVentas([]);
     setItems([]);
     setMovimientosCaja([]);
+  } finally {
     setLoading(false);
-    return;
   }
+}
 
-  const branchId = sucursalActiva.id;
+useEffect(() => {
+  if (cargandoAuth || cargandoSucursales) return;
 
-  async function cargarHistorial() {
-      try {
-        setLoading(true);
-        setError("");
+  async function cargarSucursalesHistorial() {
+    setLoading(true);
+    setError("");
 
-const { data: sesionesData, error: sesionesError } =
-  await supabase.rpc("get_cash_sessions_history", {
-    p_branch_id: branchId,
-  });
+    const { data, error } = await supabase.rpc(
+      "get_my_branches_history"
+    );
 
-        if (sesionesError) throw sesionesError;
-
-const { data: ventasTodas, error: ventasError } =
-  await supabase.rpc("get_sales_history", {
-    p_branch_id: branchId,
-  });
-
-if (ventasError) throw ventasError;
-
-const ventasData = ((ventasTodas as Venta[]) ?? []).filter(
-  (venta) => venta.cash_session_id !== null
-);
-
-const idsVentas = (ventasData ?? []).map(
-  (venta) => venta.id
-);
-
-let itemsData: ItemVenta[] = [];
-
-if (idsVentas.length > 0) {
-if (puedeAdministrar) {
-  // Datos normales de los productos vendidos
-  const { data: itemsSinCosto, error: itemsError } =
-    await supabase
-      .from("sale_items")
-      .select(
-        "sale_id, product_id, name, quantity, unit_price"
-      )
-      .in("sale_id", idsVentas);
-
-  if (itemsError) throw itemsError;
-
-  // Costos protegidos: solo Admin / Manager
-  const { data: costosData, error: costosError } =
-    await supabase.rpc("get_sale_item_costs", {
-      p_sale_ids: idsVentas,
-    });
-
-  if (costosError) throw costosError;
-
-  const costosPorVentaProducto =
-    new Map<string, number>();
-
-  (costosData ?? []).forEach(
-    (item: {
-      sale_id: string;
-      product_id: string | null;
-      unit_cost: number;
-    }) => {
-      const clave =
-        `${item.sale_id}:${item.product_id ?? "null"}`;
-
-      costosPorVentaProducto.set(
-        clave,
-        Number(item.unit_cost)
+    if (error) {
+      console.error(
+        "Error cargando sucursales históricas:",
+        error
       );
-    }
-  );
 
-  itemsData = (itemsSinCosto ?? []).map((item) => ({
-    ...item,
-    unit_cost:
-      costosPorVentaProducto.get(
-        `${item.sale_id}:${item.product_id ?? "null"}`
-      ) ?? 0,
-  }));
-} else {
-    const { data, error: itemsError } = await supabase
-      .from("sale_items")
-      .select(
-        "sale_id, product_id, name, quantity, unit_price"
-      )
-      .in("sale_id", idsVentas);
-
-    if (itemsError) throw itemsError;
-
-    itemsData = (data ?? []).map((item) => ({
-      ...item,
-      unit_cost: 0,
-    }));
-  }
-}
-
-const resultadosMovimientos = await Promise.all(
-  ((sesionesData as SesionCaja[]) ?? []).map((sesion) =>
-    supabase.rpc("get_cash_movements", {
-      p_cash_session_id: sesion.id,
-    })
-  )
-);
-
-const movimientosData: MovimientoCaja[] = [];
-
-for (const resultado of resultadosMovimientos) {
-  if (resultado.error) {
-    throw resultado.error;
-  }
-
-  movimientosData.push(
-    ...((resultado.data as MovimientoCaja[]) ?? [])
-  );
-}
-
-movimientosData.sort(
-  (a, b) =>
-    new Date(b.created_at).getTime() -
-    new Date(a.created_at).getTime()
-);
-
-  setSesiones(sesionesData ?? []);
-setVentas(ventasData ?? []);
-setItems(itemsData);
-setMovimientosCaja(movimientosData ?? []);
-      } catch (error: any) {
-        console.error("Error al cargar historial de cajas:", error);
-        setError(
-          error?.message || "No se pudo cargar el historial de cajas."
-        );
-      } finally {
-        setLoading(false);
-      }
+      setError(error.message);
+      setSucursalesHistorial([]);
+      setSucursalHistorialId("");
+      setSesiones([]);
+      setVentas([]);
+      setItems([]);
+      setMovimientosCaja([]);
+      setLoading(false);
+      return;
     }
 
-    cargarHistorial();
+    const sucursales =
+      (data as SucursalHistorial[]) ?? [];
+
+    setSucursalesHistorial(sucursales);
+
+    if (sucursales.length === 0) {
+      setSucursalHistorialId("");
+      setSesiones([]);
+      setVentas([]);
+      setItems([]);
+      setMovimientosCaja([]);
+      setLoading(false);
+      return;
+    }
+
+    const sucursalInicial =
+      sucursales.find(
+        (sucursal) =>
+          sucursal.id === sucursalActiva?.id
+      ) ??
+      sucursales.find(
+        (sucursal) => sucursal.is_main
+      ) ??
+      sucursales[0];
+
+    setSucursalHistorialId(sucursalInicial.id);
+
+    await cargarHistorial(sucursalInicial.id);
+  }
+
+  void cargarSucursalesHistorial();
 }, [
   cargandoAuth,
   cargandoSucursales,
-  sucursalActiva?.id,
   puedeAdministrar,
 ]);
 
@@ -299,6 +367,40 @@ const cajaActual = sesiones.find(
             <p className="mt-2 text-slate-700">
               Consulta las aperturas y cierres de caja.
             </p>
+
+            <div className="mt-5">
+  <label className="mb-2 block text-sm font-medium text-slate-700">
+    Sucursal
+  </label>
+
+  <select
+    value={sucursalHistorialId}
+    onChange={async (e) => {
+      const branchId = e.target.value;
+
+      setSucursalHistorialId(branchId);
+
+      // Cerramos cualquier detalle de la sucursal anterior
+      setSesionSeleccionada(null);
+      setVentaSeleccionada(null);
+
+      await cargarHistorial(branchId);
+    }}
+    className="w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-indigo-500 md:min-w-72"
+  >
+    {sucursalesHistorial.map((sucursal) => (
+      <option
+        key={sucursal.id}
+        value={sucursal.id}
+      >
+        {sucursal.name}
+        {!sucursal.active ? " (Inactiva)" : ""}
+      </option>
+    ))}
+  </select>
+</div>
+
+
           </div>
 
           <a

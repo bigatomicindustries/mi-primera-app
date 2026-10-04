@@ -18,10 +18,11 @@ const registerRatelimit = new Ratelimit({
 });
 
 export async function POST(request: Request) {
-  let nuevoUsuarioId: string | null = null;
-  let nuevoNegocioId: string | null = null;
-  let supabaseAdmin: SupabaseClient | null = null;
-  let usuarioCreadoEnEsteRegistro = false;
+let nuevoUsuarioId: string | null = null;
+let nuevoNegocioId: string | null = null;
+let nuevaSucursalId: string | null = null;
+let supabaseAdmin: SupabaseClient | null = null;
+let usuarioCreadoEnEsteRegistro = false;
 const ip =
   request.headers.get("x-vercel-forwarded-for") ||
   request.headers.get("x-forwarded-for") ||
@@ -60,6 +61,42 @@ if (!success) {
   if (!supabaseAdmin) {
     return;
   }
+
+  // 0. Limpiar datos de sucursal creados durante el registro.
+
+// Eliminar primero la asignación del administrador
+// a la sucursal principal.
+if (nuevaSucursalId && nuevoUsuarioId) {
+  const { error: asignacionRollbackError } =
+    await supabaseAdmin
+      .from("profile_branches")
+      .delete()
+      .eq("profile_id", nuevoUsuarioId)
+      .eq("branch_id", nuevaSucursalId);
+
+  if (asignacionRollbackError) {
+    console.error(
+      "Error eliminando asignación de sucursal durante rollback:",
+      asignacionRollbackError
+    );
+  }
+}
+
+// Después eliminar la sucursal principal.
+if (nuevaSucursalId) {
+  const { error: sucursalRollbackError } =
+    await supabaseAdmin
+      .from("branches")
+      .delete()
+      .eq("id", nuevaSucursalId);
+
+  if (sucursalRollbackError) {
+    console.error(
+      "Error eliminando sucursal durante rollback:",
+      sucursalRollbackError
+    );
+  }
+}
 
   // 1. Eliminar la suscripción primero.
   // subscriptions.business_id → businesses.id es RESTRICT.
@@ -134,8 +171,9 @@ if (
     }
   }
 
-  nuevoUsuarioId = null;
-  nuevoNegocioId = null;
+nuevoUsuarioId = null;
+nuevoNegocioId = null;
+nuevaSucursalId = null;
 };
 
   try {
@@ -558,8 +596,76 @@ if (suscripcionError || !nuevaSuscripcion) {
   );
 }
 
+// =====================================================
+// 10. CREAR SUCURSAL PRINCIPAL
+// =====================================================
+
+const {
+  data: nuevaSucursal,
+  error: sucursalError,
+} = await supabaseAdmin
+  .from("branches")
+  .insert({
+    business_id: nuevoNegocioId,
+    name: "Sucursal principal",
+    code: "MAIN",
+    is_main: true,
+    active: true,
+  })
+  .select("id, name, code, is_main, active")
+  .single();
+
+if (sucursalError || !nuevaSucursal) {
+  console.error(
+    "Error creando sucursal principal:",
+    sucursalError
+  );
+
+  await rollbackRegistro();
+
+  return NextResponse.json(
+    {
+      error:
+        "No se pudo crear la sucursal principal del negocio.",
+    },
+    { status: 500 }
+  );
+}
+
+nuevaSucursalId = nuevaSucursal.id;
+
+// =====================================================
+// 11. ASIGNAR ADMINISTRADOR A SUCURSAL PRINCIPAL
+// =====================================================
+
+const { error: asignacionSucursalError } =
+  await supabaseAdmin
+    .from("profile_branches")
+    .insert({
+      profile_id: nuevoUsuarioId,
+      branch_id: nuevaSucursalId,
+      business_id: nuevoNegocioId,
+    });
+
+if (asignacionSucursalError) {
+  console.error(
+    "Error asignando administrador a sucursal principal:",
+    asignacionSucursalError
+  );
+
+  await rollbackRegistro();
+
+  return NextResponse.json(
+    {
+      error:
+        "No se pudo asignar la sucursal principal al administrador.",
+    },
+    { status: 500 }
+  );
+}
+
     // =====================================================
-    // 10. RESPUESTA
+    // 12. RESPUESTA
     // =====================================================
 
     return NextResponse.json(
