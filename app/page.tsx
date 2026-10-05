@@ -22,6 +22,7 @@ type Venta = {
 };
 
 type ItemVenta = {
+  id: string;
   sale_id: string;
   product_id: string | null;
   name: string;
@@ -186,11 +187,11 @@ if (ventasHoy.length > 0) {
 
   const { data: itemsData, error: itemsError } =
     await supabase
-      .from("sale_items")
-      .select(
-        "sale_id, product_id, name, quantity, unit_price"
-      )
-      .in("sale_id", idsVentas);
+.from("sale_items")
+.select(
+  "id, sale_id, product_id, name, quantity, unit_price"
+)
+.in("sale_id", idsVentas);
 
   if (itemsError) throw itemsError;
 

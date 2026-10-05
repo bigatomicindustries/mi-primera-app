@@ -597,6 +597,7 @@ ${formatoDinero(subtotal)}`;
           <p className="mt-2 text-slate-500">
             Selecciona los productos de esta venta
           </p>
+
         </div>
 
         {/* CONTENIDO */}

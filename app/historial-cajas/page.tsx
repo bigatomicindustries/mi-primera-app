@@ -41,6 +41,7 @@ type Venta = {
 };
 
 type ItemVenta = {
+  id: string;
   sale_id: string;
   product_id: string | null;
   name: string;
@@ -128,9 +129,9 @@ async function cargarHistorial(branchId: string) {
         const { data: itemsSinCosto, error: itemsError } =
           await supabase
             .from("sale_items")
-            .select(
-              "sale_id, product_id, name, quantity, unit_price"
-            )
+.select(
+  "id, sale_id, product_id, name, quantity, unit_price"
+)
             .in("sale_id", idsVentas);
 
         if (itemsError) throw itemsError;
@@ -172,9 +173,9 @@ async function cargarHistorial(branchId: string) {
         const { data, error: itemsError } =
           await supabase
             .from("sale_items")
-            .select(
-              "sale_id, product_id, name, quantity, unit_price"
-            )
+.select(
+  "id, sale_id, product_id, name, quantity, unit_price"
+)
             .in("sale_id", idsVentas);
 
         if (itemsError) throw itemsError;
