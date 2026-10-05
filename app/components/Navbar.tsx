@@ -630,6 +630,22 @@ pathname === "/superadmin"
                   </p>
                 </Link>
 
+{perfil?.role === "admin" && (
+  <Link
+    href="/transferencias"
+    onClick={() => setMostrarMas(false)}
+    className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+  >
+    <p className="text-sm font-semibold text-slate-900">
+      Transferencias
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      Envía y recibe inventario entre sucursales
+    </p>
+  </Link>
+)}
+
                 <Link
                   href="/historial-cajas"
                   onClick={() => setMostrarMas(false)}
