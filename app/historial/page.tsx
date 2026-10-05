@@ -14,7 +14,7 @@ type Venta = {
   total: number;
   paid_amount: number;
   change_due: number;
-  payment_method: "cash" | "card";
+  payment_method: "cash" | "card" | "transfer";
   created_at: string;
 
   user_id: string | null;
@@ -342,11 +342,15 @@ async function abrirVenta(venta: Venta) {
     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
       venta.payment_method === "card"
         ? "bg-indigo-100 text-indigo-700"
+        : venta.payment_method === "transfer"
+        ? "bg-emerald-100 text-emerald-700"
         : "bg-green-100 text-green-700"
     }`}
   >
     {venta.payment_method === "card"
       ? "Tarjeta"
+      : venta.payment_method === "transfer"
+      ? "Transferencia"
       : "Efectivo"}
   </span>
 </div>

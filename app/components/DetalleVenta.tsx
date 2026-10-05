@@ -9,7 +9,7 @@ type Venta = {
   total: number;
   paid_amount: number;
   change_due: number;
-  payment_method: "cash" | "card";
+  payment_method: "cash" | "card" | "transfer";
   created_at: string;
 
   user_id: string | null;
@@ -73,9 +73,11 @@ export default function DetalleVenta({
     function reimprimirTicket() {
   if (!venta) return;
 
-  const metodoPago =
+const metodoPago =
   venta.payment_method === "card"
     ? "Tarjeta"
+    : venta.payment_method === "transfer"
+    ? "Transferencia"
     : "Efectivo";
 
 const rolUsuario = venta.user_role
@@ -268,6 +270,15 @@ ${
         </span>
       </div>
     `
+    : venta.payment_method === "transfer"
+    ? `
+      <div class="fila linea">
+        <span>Pago por transferencia</span>
+        <span>
+          ${formatoDinero(Number(venta.total))}
+        </span>
+      </div>
+    `
     : `
       <div class="fila linea">
         <span>Pago con tarjeta</span>
@@ -432,29 +443,41 @@ ${
               </strong>
             </div>
 
-            <div className="flex justify-between">
-              <span className="text-slate-500">
-                Efectivo recibido
-              </span>
+{venta.payment_method === "cash" ? (
+  <>
+    <div className="flex justify-between">
+      <span className="text-slate-500">
+        Efectivo recibido
+      </span>
 
-              <strong>
-                {formatoDinero(
-                  Number(venta.paid_amount)
-                )}
-              </strong>
-            </div>
+      <strong>
+        {formatoDinero(Number(venta.paid_amount))}
+      </strong>
+    </div>
 
-            <div className="flex justify-between">
-              <span className="text-slate-500">
-                Cambio
-              </span>
+    <div className="flex justify-between">
+      <span className="text-slate-500">
+        Cambio
+      </span>
 
-              <strong>
-                {formatoDinero(
-                  Number(venta.change_due)
-                )}
-              </strong>
-            </div>
+      <strong>
+        {formatoDinero(Number(venta.change_due))}
+      </strong>
+    </div>
+  </>
+) : (
+  <div className="flex justify-between">
+    <span className="text-slate-500">
+      {venta.payment_method === "transfer"
+        ? "Pago por transferencia"
+        : "Pago con tarjeta"}
+    </span>
+
+    <strong>
+      {formatoDinero(Number(venta.total))}
+    </strong>
+  </div>
+)}
 
 {puedeAdministrar && (
   <>

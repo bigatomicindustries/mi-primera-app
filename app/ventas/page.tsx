@@ -18,6 +18,14 @@ type CartItem = Product & {
   quantity: number;
 };
 
+type PaymentSettings = {
+  bank_name: string | null;
+  account_holder: string | null;
+  clabe: string | null;
+  account_number: string | null;
+  transfer_enabled: boolean;
+};
+
 export default function VentasPage() {
   const { sucursalActiva, cargandoSucursales } = useAuth();
 
@@ -32,12 +40,57 @@ const [mostrarPago, setMostrarPago] = useState(false);
 const [mostrarCarritoMovil, setMostrarCarritoMovil] = useState(false);
 
 const [metodoPago, setMetodoPago] =
-  useState<"cash" | "card">("cash");
+  useState<"cash" | "card" | "transfer">("cash");
 
 const [efectivoRecibido, setEfectivoRecibido] = useState("");
 
 const [ventaCompletada, setVentaCompletada] =
   useState<any>(null);
+
+const [paymentSettings, setPaymentSettings] =
+  useState<PaymentSettings | null>(null);
+
+const [whatsappTransferencia, setWhatsappTransferencia] =
+  useState("");
+
+const [errorTransferencia, setErrorTransferencia] =
+  useState("");
+
+// =========================
+// CONFIGURACIÓN DE PAGOS
+// =========================
+
+useEffect(() => {
+  async function cargarConfiguracionPagos() {
+    const { data, error } = await supabase
+      .from("business_payment_settings")
+      .select(
+        `
+          bank_name,
+          account_holder,
+          clabe,
+          account_number,
+          transfer_enabled
+        `
+      )
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "Error cargando configuración de pagos:",
+        error
+      );
+
+      setPaymentSettings(null);
+      return;
+    }
+
+    setPaymentSettings(data);
+  }
+
+  void cargarConfiguracionPagos();
+}, []);
+
   // =========================
   // CARGAR PRODUCTOS
   // =========================
@@ -379,6 +432,136 @@ if (!errorInventario) {
     console.error("Error inesperado:", error);
     alert("Ocurrió un error inesperado al procesar la venta");
   }
+}
+
+// =========================
+// ENVIAR DATOS POR WHATSAPP
+// =========================
+
+function enviarDatosTransferencia() {
+  setErrorTransferencia("");
+
+  const telefono = whatsappTransferencia.replace(/\D/g, "");
+
+  if (telefono.length !== 10) {
+    setErrorTransferencia(
+      "Escribe un número de WhatsApp de 10 dígitos."
+    );
+    return;
+  }
+
+  if (!paymentSettings?.transfer_enabled) {
+    setErrorTransferencia(
+      "Las transferencias no están habilitadas para este negocio."
+    );
+    return;
+  }
+
+  if (
+    !paymentSettings.bank_name ||
+    !paymentSettings.account_holder ||
+    !paymentSettings.clabe
+  ) {
+    setErrorTransferencia(
+      "Faltan datos bancarios en la configuración."
+    );
+    return;
+  }
+
+  const mensaje = [
+    "Hola 👋",
+    "",
+    "Estos son los datos para realizar tu transferencia:",
+    "",
+    `Banco: ${paymentSettings.bank_name}`,
+    `Titular: ${paymentSettings.account_holder}`,
+    `CLABE: ${paymentSettings.clabe}`,
+    paymentSettings.account_number
+      ? `Cuenta: ${paymentSettings.account_number}`
+      : "",
+    "",
+    `Monto: ${formatoDinero(total)}`,
+    "",
+    "Cuando realices la transferencia puedes enviar tu comprobante por este mismo medio.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const url =
+    `https://wa.me/52${telefono}` +
+    `?text=${encodeURIComponent(mensaje)}`;
+
+  window.open(
+    url,
+    "_blank",
+    "noopener,noreferrer"
+  );
+}
+
+// =========================
+// ENVIAR TICKET POR WHATSAPP
+// =========================
+
+function enviarTicketWhatsApp() {
+  if (!ventaCompletada) {
+    return;
+  }
+
+  const telefono = whatsappTransferencia.replace(/\D/g, "");
+
+  if (telefono.length !== 10) {
+    alert(
+      "No hay un número de WhatsApp válido para enviar el ticket."
+    );
+    return;
+  }
+
+  const metodo =
+    ventaCompletada.payment_method === "cash"
+      ? "Efectivo"
+      : ventaCompletada.payment_method === "card"
+      ? "Tarjeta"
+      : "Transferencia";
+
+  const productos = ventaCompletada.items.map((item: any) => {
+    const cantidad =
+      item.sale_unit === "kg"
+        ? `${Number(item.quantity).toFixed(3)} kg`
+        : `${item.quantity} ${
+            item.quantity === 1 ? "pieza" : "piezas"
+          }`;
+
+    const subtotal =
+      Number(item.sale_price) * Number(item.quantity);
+
+    return `${item.name}
+${cantidad} × ${formatoDinero(Number(item.sale_price))}
+${formatoDinero(subtotal)}`;
+  });
+
+  const mensaje = [
+    "🧾 TICKET DE COMPRA",
+    "",
+    `Folio: ${ventaCompletada.number}`,
+    "",
+    ...productos,
+    "",
+    "--------------------",
+    `Total: ${formatoDinero(ventaCompletada.total)}`,
+    `Método de pago: ${metodo}`,
+    "",
+    "¡Gracias por tu compra! 🙌",
+  ].join("\n");
+
+  const url =
+    `https://wa.me/52${telefono}` +
+    `?text=${encodeURIComponent(mensaje)}`;
+
+  window.open(
+    url,
+    "_blank",
+    "noopener,noreferrer"
+  );
 }
 
   // =========================
@@ -1020,59 +1203,93 @@ if (!errorInventario) {
     Método de pago
   </p>
 
-  <div className="grid grid-cols-2 gap-3">
-    <button
-      type="button"
-      onClick={() => {
-        setMetodoPago("cash");
-      }}
-      className={`rounded-xl border p-4 text-left transition ${
-        metodoPago === "cash"
-          ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
-          : "border-slate-200 bg-white hover:bg-slate-50"
-      }`}
-    >
-      <div className="text-xl">💵</div>
+<div className="grid grid-cols-3 gap-3">
+  <button
+    type="button"
+    onClick={() => {
+      setMetodoPago("cash");
+      setWhatsappTransferencia("");
+      setErrorTransferencia("");
+    }}
+    className={`rounded-xl border p-4 text-left transition ${
+      metodoPago === "cash"
+        ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
+        : "border-slate-200 bg-white hover:bg-slate-50"
+    }`}
+  >
+    <div className="text-xl">💵</div>
 
-      <p className="mt-2 font-semibold text-slate-900">
-        Efectivo
-      </p>
+    <p className="mt-2 font-semibold text-slate-900">
+      Efectivo
+    </p>
 
-      <p className="mt-1 text-xs text-slate-500">
-        Pago en caja
-      </p>
-    </button>
+    <p className="mt-1 text-xs text-slate-500">
+      Pago en caja
+    </p>
+  </button>
 
-    <button
-      type="button"
-      onClick={() => {
-        setMetodoPago("card");
-        setEfectivoRecibido("");
-      }}
-      className={`rounded-xl border p-4 text-left transition ${
-        metodoPago === "card"
-          ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
-          : "border-slate-200 bg-white hover:bg-slate-50"
-      }`}
-    >
-      <div className="text-xl">💳</div>
+  <button
+    type="button"
+    onClick={() => {
+      setMetodoPago("card");
+      setEfectivoRecibido("");
+      setWhatsappTransferencia("");
+      setErrorTransferencia("");
+    }}
+    className={`rounded-xl border p-4 text-left transition ${
+      metodoPago === "card"
+        ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
+        : "border-slate-200 bg-white hover:bg-slate-50"
+    }`}
+  >
+    <div className="text-xl">💳</div>
 
-      <p className="mt-2 font-semibold text-slate-900">
-        Tarjeta
-      </p>
+    <p className="mt-2 font-semibold text-slate-900">
+      Tarjeta
+    </p>
 
-      <p className="mt-1 text-xs text-slate-500">
-        Pago con terminal
-      </p>
-    </button>
-  </div>
+    <p className="mt-1 text-xs text-slate-500">
+      Pago con terminal
+    </p>
+  </button>
+
+  <button
+    type="button"
+    onClick={() => {
+      setMetodoPago("transfer");
+      setEfectivoRecibido("");
+      setErrorTransferencia("");
+    }}
+    disabled={!paymentSettings?.transfer_enabled}
+    className={`rounded-xl border p-4 text-left transition ${
+      metodoPago === "transfer"
+        ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
+        : "border-slate-200 bg-white hover:bg-slate-50"
+    } ${
+      !paymentSettings?.transfer_enabled
+        ? "cursor-not-allowed opacity-40"
+        : ""
+    }`}
+  >
+    <div className="text-xl">🏦</div>
+
+    <p className="mt-2 font-semibold text-slate-900">
+      Transferencia
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      {!paymentSettings?.transfer_enabled
+        ? "No disponible"
+        : "Transferencia bancaria"}
+    </p>
+  </button>
 </div>
 
-  {metodoPago === "cash" && (
+{metodoPago === "cash" && (
   <>
-      <label className="text-sm font-medium text-slate-700">
-        Efectivo recibido
-      </label>
+    <label className="text-sm font-medium text-slate-700">
+      Efectivo recibido
+    </label>
 
 <input
   type="text"
@@ -1144,32 +1361,121 @@ if (!errorInventario) {
         </>
 )}
 
-      <button
-        onClick={async () => {
-          await cobrarVenta();
-          setMostrarPago(false);
-          setEfectivoRecibido("");
-        }}
-        disabled={
-  metodoPago === "cash" &&
-  (efectivoInsuficiente || efectivo <= 0)
-}
-        className="mt-6 w-full rounded-xl bg-indigo-600 px-5 py-4 text-lg font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {metodoPago === "cash"
-  ? "Confirmar cobro"
-  : `Confirmar pago ${formatoDinero(total)}`}
-      </button>
+{metodoPago === "transfer" && (
+  <div className="mt-6">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-sm font-semibold text-slate-900">
+        Enviar datos de transferencia
+      </p>
+
+      <p className="mt-1 text-sm text-slate-500">
+        Escribe el WhatsApp del cliente para enviarle los
+        datos bancarios y el monto exacto.
+      </p>
+
+      <label className="mt-4 block text-sm font-medium text-slate-700">
+        WhatsApp del cliente
+      </label>
+
+      <div className="mt-2 flex items-center rounded-xl border border-slate-200 bg-white focus-within:border-green-500">
+        <span className="border-r border-slate-200 px-4 py-3 font-semibold text-slate-500">
+          +52
+        </span>
+
+        <input
+          type="tel"
+          inputMode="numeric"
+          value={whatsappTransferencia}
+          onChange={(e) => {
+            setWhatsappTransferencia(
+              e.target.value
+                .replace(/\D/g, "")
+                .slice(0, 10)
+            );
+
+            setErrorTransferencia("");
+          }}
+          placeholder="5512345678"
+          className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none"
+        />
+      </div>
+
+      <div className="mt-2 flex items-center justify-between">
+        <p className="text-xs text-slate-400">
+          Número mexicano de 10 dígitos
+        </p>
+
+        <p
+          className={`text-xs font-semibold ${
+            whatsappTransferencia.length === 10
+              ? "text-green-600"
+              : "text-slate-400"
+          }`}
+        >
+          {whatsappTransferencia.length}/10
+        </p>
+      </div>
+
+      {errorTransferencia && (
+        <p className="mt-3 text-sm font-medium text-red-600">
+          {errorTransferencia}
+        </p>
+      )}
 
       <button
-        onClick={() => {
-          setMostrarPago(false);
-          setEfectivoRecibido("");
-        }}
-        className="mt-3 w-full rounded-xl px-5 py-3 font-medium text-slate-500 hover:bg-slate-50"
+        type="button"
+        onClick={enviarDatosTransferencia}
+        disabled={whatsappTransferencia.length !== 10}
+        className="mt-4 w-full rounded-xl bg-green-600 px-4 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Cancelar
+        Enviar datos por WhatsApp
       </button>
+    </div>
+
+    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <p className="text-sm font-semibold text-amber-900">
+        Confirma la transferencia antes de registrar la venta
+      </p>
+
+      <p className="mt-1 text-xs leading-5 text-amber-700">
+        Enviar los datos por WhatsApp no registra la venta.
+        Cuando hayas confirmado que recibiste el pago, pulsa
+        el botón de confirmar.
+      </p>
+    </div>
+  </div>
+)}
+
+<button
+  type="button"
+  onClick={async () => {
+    await cobrarVenta();
+    setEfectivoRecibido("");
+  }}
+  disabled={
+    metodoPago === "cash" &&
+    (efectivoInsuficiente || efectivo <= 0)
+  }
+  className="mt-6 w-full rounded-xl bg-indigo-600 px-5 py-4 text-lg font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+>
+  {metodoPago === "cash"
+    ? "Confirmar cobro"
+    : metodoPago === "transfer"
+    ? `Confirmar transferencia ${formatoDinero(total)}`
+    : `Confirmar pago ${formatoDinero(total)}`}
+</button>
+
+<button
+  onClick={() => {
+    setMostrarPago(false);
+    setEfectivoRecibido("");
+  }}
+  className="mt-3 w-full rounded-xl px-5 py-3 font-medium text-slate-500 hover:bg-slate-50"
+>
+  Cancelar
+</button>
+
+</div>
 
     </div>
   </div>
@@ -1243,35 +1549,79 @@ if (!errorInventario) {
           </span>
         </div>
 
-        <div className="flex justify-between text-slate-600">
-          <span>Efectivo</span>
-          <span>
-            {formatoDinero(ventaCompletada.paid_amount)}
-          </span>
-        </div>
+{ventaCompletada.payment_method === "cash" ? (
+  <>
+    <div className="flex items-center justify-between">
+      <span className="text-slate-600">
+        Efectivo
+      </span>
 
-        <div className="flex justify-between border-t border-slate-200 pt-3">
-          <span className="font-semibold text-slate-900">
-            Cambio
-          </span>
+      <span className="text-slate-600">
+        ${ventaCompletada.paid_amount.toFixed(2)}
+      </span>
+    </div>
 
-          <span className="text-xl font-bold text-green-600">
-            {formatoDinero(ventaCompletada.change_due)}
-          </span>
-        </div>
+    <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+      <span className="font-semibold text-slate-900">
+        Cambio
+      </span>
+
+      <span className="font-bold text-green-600">
+        ${ventaCompletada.change_due.toFixed(2)}
+      </span>
+    </div>
+  </>
+) : (
+  <>
+    <div className="flex items-center justify-between">
+      <span className="text-slate-600">
+        Método
+      </span>
+
+      <span className="font-medium text-slate-900">
+        {ventaCompletada.payment_method === "card"
+          ? "Tarjeta"
+          : "Transferencia"}
+      </span>
+    </div>
+
+    <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+      <span className="font-semibold text-slate-900">
+        Pagado
+      </span>
+
+      <span className="font-bold text-slate-900">
+        ${ventaCompletada.paid_amount.toFixed(2)}
+      </span>
+    </div>
+  </>
+)}
+
       </div>
 
       {/* BOTONES */}
       <div className="mt-6 space-y-3">
         <button
-          onClick={() => {
-            setVentaCompletada(null);
-            setEfectivoRecibido("");
-          }}
+onClick={() => {
+  setVentaCompletada(null);
+  setEfectivoRecibido("");
+  setWhatsappTransferencia("");
+  setErrorTransferencia("");
+}}
           className="w-full rounded-xl bg-indigo-600 px-5 py-4 text-lg font-semibold text-white transition hover:bg-indigo-700"
         >
           Nueva venta
         </button>
+
+{whatsappTransferencia.length === 10 && (
+  <button
+    type="button"
+    onClick={enviarTicketWhatsApp}
+    className="w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
+  >
+    Enviar ticket por WhatsApp
+  </button>
+)}
 
         <button
           onClick={() => window.print()}

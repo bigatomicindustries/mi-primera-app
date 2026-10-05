@@ -12,7 +12,7 @@ type Venta = {
   total: number;
   paid_amount: number;
   change_due: number;
-  payment_method: "cash" | "card";
+  payment_method: "cash" | "card" | "transfer";
   created_at: string;
   cash_session_id: string | null;
 

@@ -21,7 +21,7 @@ type Venta = {
   total: number;
   paid_amount: number;
   change_due: number;
-  payment_method: "cash" | "card";
+payment_method: "cash" | "card" | "transfer";
   created_at: string;
 };
 
@@ -387,12 +387,21 @@ const ventasTarjeta = ventas.filter(
   (venta) => venta.payment_method === "card"
 );
 
+const ventasTransferencia = ventas.filter(
+  (venta) => venta.payment_method === "transfer"
+);
+
 const totalVentasEfectivo = ventasEfectivo.reduce(
   (suma, venta) => suma + Number(venta.total),
   0
 );
 
 const totalVentasTarjeta = ventasTarjeta.reduce(
+  (suma, venta) => suma + Number(venta.total),
+  0
+);
+
+const totalVentasTransferencia = ventasTransferencia.reduce(
   (suma, venta) => suma + Number(venta.total),
   0
 );
@@ -638,7 +647,7 @@ const diferencia = contado - efectivoEsperado;
     </p>
   </div>
 
-  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+<div className="mt-6 grid gap-4 sm:grid-cols-3">
 
     {/* EFECTIVO */}
     <div className="rounded-2xl bg-slate-50 p-5">
@@ -687,6 +696,33 @@ const diferencia = contado - efectivoEsperado;
         {ventasTarjeta.length === 1 ? "venta" : "ventas"}
       </p>
     </div>
+
+{/* TRANSFERENCIA */}
+
+<div className="rounded-2xl bg-slate-50 p-5">
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-sm text-slate-500">
+        Transferencia
+      </p>
+
+      <p className="mt-1 text-2xl font-bold text-green-600">
+        {formatoDinero(totalVentasTransferencia)}
+      </p>
+    </div>
+
+    <div className="text-3xl">
+      🏦
+    </div>
+  </div>
+
+  <p className="mt-3 text-sm text-slate-500">
+    {ventasTransferencia.length}{" "}
+    {ventasTransferencia.length === 1
+      ? "venta"
+      : "ventas"}
+  </p>
+</div>
 
   </div>
 </div>
@@ -1014,6 +1050,17 @@ const diferencia = contado - efectivoEsperado;
       {formatoDinero(totalVentasTarjeta)}
     </span>
   </div>
+
+{/* VENTAS POR TRANSFERENCIA */}
+<div className="flex justify-between">
+  <span className="text-slate-500">
+    Ventas por transferencia
+  </span>
+
+  <span className="font-semibold text-green-600">
+    {formatoDinero(totalVentasTransferencia)}
+  </span>
+</div>
 
   {/* VENTAS TOTALES */}
   <div className="flex justify-between border-t pt-3">

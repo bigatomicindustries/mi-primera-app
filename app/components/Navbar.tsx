@@ -322,6 +322,24 @@ useEffect(() => {
               </p>
             </Link>
 
+{/* CONFIGURACIÓN */}
+
+{puedeAdministrar && (
+  <Link
+    href="/configuracion/pagos"
+    onClick={() => setMostrarMas(false)}
+    className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+  >
+    <p className="text-sm font-semibold text-slate-900">
+      Configuración
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      Pagos y transferencias
+    </p>
+  </Link>
+)}
+
           </div>
         )}
       </div>
@@ -511,6 +529,7 @@ pathname === "/historial" ||
 pathname === "/movimientos" ||
 pathname === "/historial-cajas" ||
 pathname === "/usuarios" ||
+pathname.startsWith("/configuracion") ||
 pathname === "/superadmin"
                   ? "bg-slate-900 text-white"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -624,6 +643,24 @@ pathname === "/superadmin"
                     Aperturas, cierres y arqueos
                   </p>
                 </Link>
+
+{/* CONFIGURACIÓN */}
+
+{puedeAdministrar && (
+  <Link
+    href="/configuracion/pagos"
+    onClick={() => setMostrarMas(false)}
+    className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+  >
+    <p className="text-sm font-semibold text-slate-900">
+      Configuración
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      Pagos y transferencias
+    </p>
+  </Link>
+)}
 
               </div>
             )}
