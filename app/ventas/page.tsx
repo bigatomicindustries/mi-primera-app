@@ -11,6 +11,7 @@ type Product = {
   stock: number;
   sale_price: number;
   minimum_stock: number;
+  sale_unit: "piece" | "kg";
 };
 
 type CartItem = Product & {
@@ -22,6 +23,7 @@ export default function VentasPage() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cantidadesKg, setCantidadesKg] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -61,11 +63,12 @@ useEffect(() => {
       .select(`
         stock,
         minimum_stock,
-        product:products!inner (
-          id,
-          name,
-          sale_price
-        )
+product:products!inner (
+  id,
+  name,
+  sale_price,
+  sale_unit
+)
       `)
       .eq("branch_id", sucursalActiva.id)
       .order("product_id");
@@ -78,13 +81,14 @@ useEffect(() => {
       return;
     }
 
-    const productosSucursal: Product[] = (data ?? []).map((item: any) => ({
-      id: item.product.id,
-      name: item.product.name,
-      sale_price: Number(item.product.sale_price),
-      stock: Number(item.stock),
-      minimum_stock: Number(item.minimum_stock),
-    }));
+const productosSucursal: Product[] = (data ?? []).map((item: any) => ({
+  id: item.product.id,
+  name: item.product.name,
+  sale_price: Number(item.product.sale_price),
+  stock: Number(item.stock),
+  minimum_stock: Number(item.minimum_stock),
+  sale_unit: item.product.sale_unit,
+}));
 
     productosSucursal.sort((a, b) =>
       a.name.localeCompare(b.name)
@@ -119,82 +123,111 @@ useEffect(() => {
   // AGREGAR AL CARRITO
   // =========================
 
-  function agregarProducto(product: Product) {
-    setCart((currentCart) => {
-      const existing = currentCart.find(
-        (item) => item.id === product.id
-      );
+function agregarProducto(product: Product) {
+  setCart((currentCart) => {
+    const existing = currentCart.find(
+      (item) => item.id === product.id
+    );
 
-      if (existing) {
-        if (existing.quantity >= product.stock) {
-          return currentCart;
-        }
+    const incremento =
+      product.sale_unit === "kg" ? 0.001 : 1;
 
-        return currentCart.map((item) =>
-          item.id === product.id
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-              }
-            : item
-        );
-      }
+    if (existing) {
+const nuevaCantidad =
+  product.sale_unit === "kg"
+    ? Number((existing.quantity + incremento).toFixed(3))
+    : existing.quantity + incremento;
 
-      if (product.stock <= 0) {
+      if (nuevaCantidad > product.stock) {
         return currentCart;
       }
 
-      return [
-        ...currentCart,
-        {
-          ...product,
-          quantity: 1,
-        },
-      ];
-    });
-  }
+      return currentCart.map((item) =>
+        item.id === product.id
+          ? {
+              ...item,
+              quantity: nuevaCantidad,
+            }
+          : item
+      );
+    }
+
+    if (product.stock <= 0) {
+      return currentCart;
+    }
+
+    return [
+      ...currentCart,
+      {
+        ...product,
+        quantity:
+          product.sale_unit === "kg"
+            ? 0.001
+            : 1,
+      },
+    ];
+  });
+}
 
   // =========================
   // AUMENTAR CANTIDAD
   // =========================
 
-  function aumentarCantidad(id: string) {
-    setCart((currentCart) =>
-      currentCart.map((item) => {
-        if (item.id !== id) {
-          return item;
-        }
+function aumentarCantidad(id: string) {
+  setCart((currentCart) =>
+    currentCart.map((item) => {
+      if (item.id !== id) {
+        return item;
+      }
 
-        if (item.quantity >= item.stock) {
-          return item;
-        }
+      const incremento =
+        item.sale_unit === "kg" ? 0.001 : 1;
 
-        return {
-          ...item,
-          quantity: item.quantity + 1,
-        };
-      })
-    );
-  }
+const nuevaCantidad =
+  item.sale_unit === "kg"
+    ? Number((item.quantity + incremento).toFixed(3))
+    : item.quantity + incremento;
+
+      if (nuevaCantidad > item.stock) {
+        return item;
+      }
+
+      return {
+        ...item,
+        quantity: nuevaCantidad,
+      };
+    })
+  );
+}
 
   // =========================
   // DISMINUIR CANTIDAD
   // =========================
 
-  function disminuirCantidad(id: string) {
-    setCart((currentCart) =>
-      currentCart
-        .map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantity: item.quantity - 1,
-              }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
-  }
+function disminuirCantidad(id: string) {
+  setCart((currentCart) =>
+    currentCart
+      .map((item) => {
+        if (item.id !== id) {
+          return item;
+        }
+
+        const decremento =
+          item.sale_unit === "kg" ? 0.001 : 1;
+
+const nuevaCantidad =
+  item.sale_unit === "kg"
+    ? Number((item.quantity - decremento).toFixed(3))
+    : item.quantity - decremento;
+
+        return {
+          ...item,
+          quantity: nuevaCantidad,
+        };
+      })
+      .filter((item) => item.quantity > 0)
+  );
+}
 
   // =========================
   // ELIMINAR PRODUCTO
@@ -226,12 +259,7 @@ useEffect(() => {
     );
   }, [cart]);
 
-  const totalProductos = useMemo(() => {
-    return cart.reduce(
-      (sum, item) => sum + item.quantity,
-      0
-    );
-  }, [cart]);
+const totalProductos = cart.length;
 
   const efectivo = Number(efectivoRecibido) || 0;
 const cambio = Math.max(0, efectivo - total);
@@ -315,11 +343,12 @@ const { data: inventarioActualizado, error: errorInventario } =
     .select(`
       stock,
       minimum_stock,
-      product:products!inner (
-        id,
-        name,
-        sale_price
-      )
+product:products!inner (
+  id,
+  name,
+  sale_price,
+  sale_unit
+)
     `)
     .eq("branch_id", sucursalActiva.id)
     .order("product_id");
@@ -330,6 +359,7 @@ if (!errorInventario) {
       id: item.product.id,
       name: item.product.name,
       sale_price: Number(item.product.sale_price),
+      sale_unit: item.product.sale_unit,
       stock: Number(item.stock),
       minimum_stock: Number(item.minimum_stock),
     }));
@@ -466,16 +496,23 @@ if (!errorInventario) {
                                 {product.name}
                               </h3>
 
-                              <p className="mt-1 text-sm text-slate-500">
-                                Stock: {product.stock}
-                              </p>
+<p className="mt-1 text-sm text-slate-500">
+  Stock:{" "}
+  {product.sale_unit === "kg"
+    ? `${product.stock.toFixed(3)} kg`
+    : `${product.stock} ${product.stock === 1 ? "pieza" : "piezas"}`}
+</p>
                             </div>
 
-                            <p className="font-bold">
-                              {formatoDinero(
-                                Number(product.sale_price)
-                              )}
-                            </p>
+<div className="text-right">
+  <p className="font-bold">
+    {formatoDinero(Number(product.sale_price))}
+  </p>
+
+  <p className="text-xs text-slate-400">
+    {product.sale_unit === "kg" ? "por kg" : "por pieza"}
+  </p>
+</div>
                           </div>
 
                           <button
@@ -574,12 +611,10 @@ if (!errorInventario) {
                               {item.name}
                             </h3>
 
-                            <p className="mt-1 text-sm text-slate-500">
-                              {formatoDinero(
-                                Number(item.sale_price)
-                              )}{" "}
-                              c/u
-                            </p>
+<p className="mt-1 text-sm text-slate-500">
+  {formatoDinero(Number(item.sale_price))}{" "}
+  {item.sale_unit === "kg" ? "por kg" : "por pieza"}
+</p>
                           </div>
 
                           <button
@@ -596,33 +631,84 @@ if (!errorInventario) {
 
                           {/* CONTADOR */}
 
-                          <div className="flex items-center rounded-lg border border-slate-200">
+<div className="flex items-center rounded-xl border border-slate-200">
+  <button
+    type="button"
+    onClick={() => disminuirCantidad(item.id)}
+    className="px-4 py-2 text-lg"
+  >
+    −
+  </button>
 
-                            <button
-                              onClick={() =>
-                                disminuirCantidad(item.id)
-                              }
-                              className="px-3 py-2 text-lg hover:bg-slate-50"
-                            >
-                              −
-                            </button>
+{item.sale_unit === "kg" ? (
+<input
+  type="text"
+  inputMode="decimal"
+  value={cantidadesKg[item.id] ?? String(item.quantity)}
+  onChange={(e) => {
+    const texto = e.target.value.replace(",", ".");
 
-                            <span className="min-w-10 text-center font-medium">
-                              {item.quantity}
-                            </span>
+    // Permite borrar el campo y escribir hasta 3 decimales.
+    if (!/^\d*\.?\d{0,3}$/.test(texto)) {
+      return;
+    }
 
-                            <button
-                              onClick={() =>
-                                aumentarCantidad(item.id)
-                              }
-                              disabled={
-                                item.quantity >= item.stock
-                              }
-                              className="px-3 py-2 text-lg hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
-                            >
-                              +
-                            </button>
-                          </div>
+    setCantidadesKg((actual) => ({
+      ...actual,
+      [item.id]: texto,
+    }));
+
+    // Estados temporales válidos mientras el usuario escribe.
+    if (texto === "" || texto === ".") {
+      return;
+    }
+
+    const valor = Number(texto);
+
+    if (
+      !Number.isFinite(valor) ||
+      valor <= 0 ||
+      valor > item.stock
+    ) {
+      return;
+    }
+
+    setCart((currentCart) =>
+      currentCart.map((cartItem) =>
+        cartItem.id === item.id
+          ? {
+              ...cartItem,
+              quantity: valor,
+            }
+          : cartItem
+      )
+    );
+  }}
+  onBlur={() => {
+    setCantidadesKg((actual) => {
+      const nuevo = { ...actual };
+      delete nuevo[item.id];
+      return nuevo;
+    });
+  }}
+  className="w-20 border-0 bg-transparent text-center font-semibold outline-none"
+/>
+
+  ) : (
+    <span className="min-w-10 text-center font-semibold">
+      {item.quantity}
+    </span>
+  )}
+
+  <button
+    type="button"
+    onClick={() => aumentarCantidad(item.id)}
+    disabled={item.quantity >= item.stock}
+    className="px-4 py-2 text-lg disabled:text-slate-300"
+  >
+    +
+  </button>
+</div>
 
                           {/* SUBTOTAL */}
 
@@ -766,9 +852,10 @@ if (!errorInventario) {
                   {item.name}
                 </h3>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  {formatoDinero(Number(item.sale_price))} c/u
-                </p>
+<p className="mt-1 text-sm text-slate-500">
+  {formatoDinero(Number(item.sale_price))}{" "}
+  {item.sale_unit === "kg" ? "por kg" : "por pieza"}
+</p>
               </div>
 
               <button
@@ -781,28 +868,82 @@ if (!errorInventario) {
             </div>
 
             <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center rounded-xl border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => disminuirCantidad(item.id)}
-                  className="px-4 py-2 text-lg"
-                >
-                  −
-                </button>
+<div className="flex items-center rounded-lg border border-slate-200">
+  <button
+    type="button"
+    onClick={() => disminuirCantidad(item.id)}
+    className="px-3 py-2 text-lg hover:bg-slate-50"
+  >
+    −
+  </button>
 
-                <span className="min-w-10 text-center font-semibold">
-                  {item.quantity}
-                </span>
+{item.sale_unit === "kg" ? (
+  <input
+    type="text"
+    inputMode="decimal"
+    value={cantidadesKg[item.id] ?? String(item.quantity)}
+    onChange={(e) => {
+      const texto = e.target.value.replace(",", ".");
 
-                <button
-                  type="button"
-                  onClick={() => aumentarCantidad(item.id)}
-                  disabled={item.quantity >= item.stock}
-                  className="px-4 py-2 text-lg disabled:text-slate-300"
-                >
-                  +
-                </button>
-              </div>
+      if (!/^\d*\.?\d{0,3}$/.test(texto)) {
+        return;
+      }
+
+      setCantidadesKg((actual) => ({
+        ...actual,
+        [item.id]: texto,
+      }));
+
+      if (texto === "" || texto === ".") {
+        return;
+      }
+
+      const valor = Number(texto);
+
+      if (
+        !Number.isFinite(valor) ||
+        valor <= 0 ||
+        valor > item.stock
+      ) {
+        return;
+      }
+
+      setCart((currentCart) =>
+        currentCart.map((cartItem) =>
+          cartItem.id === item.id
+            ? {
+                ...cartItem,
+                quantity: valor,
+              }
+            : cartItem
+        )
+      );
+    }}
+    onBlur={() => {
+      setCantidadesKg((actual) => {
+        const nuevo = { ...actual };
+        delete nuevo[item.id];
+        return nuevo;
+      });
+    }}
+    className="w-20 border-0 bg-transparent text-center font-medium outline-none"
+  />
+) : (
+
+    <span className="min-w-10 text-center font-medium">
+      {item.quantity}
+    </span>
+  )}
+
+  <button
+    type="button"
+    onClick={() => aumentarCantidad(item.id)}
+    disabled={item.quantity >= item.stock}
+    className="px-3 py-2 text-lg hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+  >
+    +
+  </button>
+</div>
 
               <p className="font-bold text-slate-900">
                 {formatoDinero(
@@ -1073,9 +1214,14 @@ if (!errorInventario) {
                   {item.name}
                 </p>
 
-                <p className="text-sm text-slate-500">
-                  {item.quantity} × {formatoDinero(Number(item.sale_price))}
-                </p>
+<p className="text-sm text-slate-500">
+  {item.sale_unit === "kg"
+    ? `${Number(item.quantity).toFixed(3)} kg`
+    : `${item.quantity} ${item.quantity === 1 ? "pieza" : "piezas"}`}
+  {" × "}
+  {formatoDinero(Number(item.sale_price))}
+  {item.sale_unit === "kg" ? "/kg" : "/pieza"}
+</p>
               </div>
 
               <p className="font-semibold text-slate-900">

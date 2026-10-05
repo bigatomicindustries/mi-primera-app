@@ -10,6 +10,7 @@ type Producto = {
   barcode: string | null;
   cost_price: number;
   sale_price: number;
+  sale_unit: "piece" | "kg";
   stock: number;
   minimum_stock: number;
   created_at: string;
@@ -43,6 +44,7 @@ const [productoEditado, setProductoEditado] = useState({
   barcode: "",
   cost_price: "",
   sale_price: "",
+  sale_unit: "piece" as "piece" | "kg",
   minimum_stock: "",
 });
 
@@ -51,6 +53,7 @@ const [nuevoProducto, setNuevoProducto] = useState({
   barcode: "",
   cost_price: "",
   sale_price: "",
+  sale_unit: "piece" as "piece" | "kg",
   stock: "",
   minimum_stock: "",
 });
@@ -94,14 +97,15 @@ const { data: inventarioData, error: inventarioError } =
     .select(`
       stock,
       minimum_stock,
-      product:products!inner (
-        id,
-        name,
-        barcode,
-        sale_price,
-        created_at,
-        updated_at
-      )
+product:products!inner (
+  id,
+  name,
+  barcode,
+  sale_price,
+  sale_unit,
+  created_at,
+  updated_at
+)
     `)
     .eq("branch_id", sucursalActiva.id)
     .order("product_id");
@@ -114,6 +118,7 @@ const productosData = (inventarioData ?? []).map(
     name: item.product.name,
     barcode: item.product.barcode,
     sale_price: Number(item.product.sale_price),
+    sale_unit: item.product.sale_unit ?? "piece",
     stock: Number(item.stock),
     minimum_stock: Number(item.minimum_stock),
     created_at: item.product.created_at,
@@ -236,15 +241,23 @@ async function crearProducto() {
     return;
   }
 
-  if (
-    !Number.isInteger(stock) ||
-    stock < 0 ||
-    !Number.isInteger(stockMinimo) ||
-    stockMinimo < 0
-  ) {
-    setError("El stock y stock mínimo deben ser números enteros.");
-    return;
-  }
+if (
+  !Number.isFinite(stock) ||
+  stock < 0 ||
+  !Number.isFinite(stockMinimo) ||
+  stockMinimo < 0
+) {
+  setError("Revisa el stock y el stock mínimo.");
+  return;
+}
+
+if (
+  nuevoProducto.sale_unit === "piece" &&
+  (!Number.isInteger(stock) || !Number.isInteger(stockMinimo))
+) {
+  setError("Los productos por pieza deben usar cantidades enteras.");
+  return;
+}
 
   try {
     setGuardandoProducto(true);
@@ -258,6 +271,7 @@ const { error } = await supabase.rpc("create_product", {
   p_initial_stock: stock,
   p_minimum_stock: stockMinimo,
   p_branch_id: sucursalActiva.id,
+  p_sale_unit: nuevoProducto.sale_unit,
 });
 
 if (error) throw error;
@@ -265,14 +279,15 @@ if (error) throw error;
 // Recargar desde branch_inventory para usar la fuente real
 await cargarProductos();
 
-    setNuevoProducto({
-      name: "",
-      barcode: "",
-      cost_price: "",
-      sale_price: "",
-      stock: "",
-      minimum_stock: "",
-    });
+setNuevoProducto({
+  name: "",
+  barcode: "",
+  cost_price: "",
+  sale_price: "",
+  sale_unit: "piece",
+  stock: "",
+  minimum_stock: "",
+});
 
     setMostrarNuevoProducto(false);
 } catch (error: any) {
@@ -298,13 +313,14 @@ function abrirEditor(producto: Producto) {
 
   setProductoEditando(producto);
 
-  setProductoEditado({
-    name: producto.name,
-    barcode: producto.barcode ?? "",
-    cost_price: String(producto.cost_price),
-    sale_price: String(producto.sale_price),
-    minimum_stock: String(producto.minimum_stock),
-  });
+setProductoEditado({
+  name: producto.name,
+  barcode: producto.barcode ?? "",
+  cost_price: String(producto.cost_price),
+  sale_price: String(producto.sale_price),
+  sale_unit: producto.sale_unit,
+  minimum_stock: String(producto.minimum_stock),
+});
 }
 
 async function guardarEdicion() {
@@ -334,10 +350,18 @@ async function guardarEdicion() {
     return;
   }
 
-  if (!Number.isInteger(stockMinimo) || stockMinimo < 0) {
-    setError("El stock mínimo debe ser un número entero.");
-    return;
-  }
+if (!Number.isFinite(stockMinimo) || stockMinimo < 0) {
+  setError("El stock mínimo debe ser un número válido.");
+  return;
+}
+
+if (
+  productoEditado.sale_unit === "piece" &&
+  !Number.isInteger(stockMinimo)
+) {
+  setError("El stock mínimo de un producto por pieza debe ser entero.");
+  return;
+}
 
   try {
     setGuardandoEdicion(true);
@@ -351,6 +375,7 @@ const { error } = await supabase.rpc("update_product", {
   p_sale_price: precio,
   p_minimum_stock: stockMinimo,
   p_branch_id: sucursalActiva.id,
+  p_sale_unit: productoEditado.sale_unit,
 });
 
 if (error) throw error;
@@ -388,15 +413,22 @@ async function ajustarStock() {
 
   const cantidad = Number(cantidadAjuste);
 
-  if (
-    !Number.isInteger(cantidad) ||
-    cantidad === 0
-  ) {
-    setError(
-      "Ingresa un ajuste válido. Usa números positivos o negativos."
-    );
-    return;
-  }
+if (!Number.isFinite(cantidad) || cantidad === 0) {
+  setError(
+    "Ingresa un ajuste válido. Usa números positivos o negativos."
+  );
+  return;
+}
+
+if (
+  productoAjustando.sale_unit === "piece" &&
+  !Number.isInteger(cantidad)
+) {
+  setError(
+    "Los productos por pieza deben ajustarse con cantidades enteras."
+  );
+  return;
+}
 
   if (
     productoAjustando.stock + cantidad < 0
@@ -467,10 +499,20 @@ if (!sucursalActiva) {
 
   const cantidad = Number(cantidadAgregar);
 
-  if (!Number.isInteger(cantidad) || cantidad <= 0) {
-    setError("Ingresa una cantidad válida.");
-    return;
-  }
+if (!Number.isFinite(cantidad) || cantidad <= 0) {
+  setError("Ingresa una cantidad válida.");
+  return;
+}
+
+if (
+  productoSeleccionado.sale_unit === "piece" &&
+  !Number.isInteger(cantidad)
+) {
+  setError(
+    "Los productos por pieza deben agregarse con cantidades enteras."
+  );
+  return;
+}
 
   try {
     setGuardandoStock(true);
@@ -916,6 +958,26 @@ const { data, error } = await supabase.rpc(
 
         </div>
 
+<div>
+  <label className="mb-2 block text-sm font-semibold text-slate-700">
+    Unidad de venta
+  </label>
+
+  <select
+    value={nuevoProducto.sale_unit}
+    onChange={(e) =>
+      setNuevoProducto({
+        ...nuevoProducto,
+        sale_unit: e.target.value as "piece" | "kg",
+      })
+    }
+    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500"
+  >
+    <option value="piece">Pieza</option>
+    <option value="kg">Kilogramo</option>
+  </select>
+</div>
+
         {/* STOCK */}
         <div className="grid grid-cols-2 gap-4">
 
@@ -927,7 +989,7 @@ const { data, error } = await supabase.rpc(
             <input
               type="number"
               min="0"
-              step="1"
+              step={nuevoProducto.sale_unit === "kg" ? "0.001" : "1"}
               value={nuevoProducto.stock}
               onChange={(e) =>
                 setNuevoProducto({
@@ -935,7 +997,7 @@ const { data, error } = await supabase.rpc(
                   stock: e.target.value,
                 })
               }
-              placeholder="0"
+              placeholder={nuevoProducto.sale_unit === "kg" ? "0.000" : "5"}
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
             />
           </div>
@@ -948,7 +1010,7 @@ const { data, error } = await supabase.rpc(
             <input
               type="number"
               min="0"
-              step="1"
+              step={nuevoProducto.sale_unit === "kg" ? "0.001" : "1"}
               value={nuevoProducto.minimum_stock}
               onChange={(e) =>
                 setNuevoProducto({
@@ -956,7 +1018,7 @@ const { data, error } = await supabase.rpc(
                   minimum_stock: e.target.value,
                 })
               }
-              placeholder="5"
+              placeholder={nuevoProducto.sale_unit === "kg" ? "0.000" : "5"}
               className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
             />
           </div>
@@ -1097,6 +1159,26 @@ const { data, error } = await supabase.rpc(
 
         </div>
 
+<div>
+  <label className="mb-2 block text-sm font-semibold text-slate-700">
+    Unidad de venta
+  </label>
+
+  <select
+    value={productoEditado.sale_unit}
+    onChange={(e) =>
+      setProductoEditado({
+        ...productoEditado,
+        sale_unit: e.target.value as "piece" | "kg",
+      })
+    }
+    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-500"
+  >
+    <option value="piece">Pieza</option>
+    <option value="kg">Kilogramo</option>
+  </select>
+</div>
+
         <div>
           <label className="text-sm font-medium text-slate-700">
             Stock mínimo
@@ -1105,7 +1187,7 @@ const { data, error } = await supabase.rpc(
           <input
             type="number"
             min="0"
-            step="1"
+            step={productoEditado.sale_unit === "kg" ? "0.001" : "1"}
             value={productoEditado.minimum_stock}
             onChange={(e) =>
               setProductoEditado({
@@ -1198,7 +1280,7 @@ const { data, error } = await supabase.rpc(
 
         <input
           type="number"
-          step="1"
+          step={productoAjustando.sale_unit === "kg" ? "0.001" : "1"}
           value={cantidadAjuste}
           onChange={(e) =>
             setCantidadAjuste(e.target.value)
@@ -1229,9 +1311,11 @@ const { data, error } = await supabase.rpc(
         />
       </div>
 
-      {cantidadAjuste &&
-        Number.isInteger(Number(cantidadAjuste)) &&
-        Number(cantidadAjuste) !== 0 && (
+{cantidadAjuste &&
+  Number.isFinite(Number(cantidadAjuste)) &&
+  Number(cantidadAjuste) !== 0 &&
+  (productoAjustando.sale_unit === "kg" ||
+    Number.isInteger(Number(cantidadAjuste))) && (
 
           <div className="mt-5 rounded-xl border bg-slate-50 p-4">
 
@@ -1334,11 +1418,15 @@ const { data, error } = await supabase.rpc(
 
         <input
           type="number"
-          min="1"
-          step="1"
+min={productoSeleccionado.sale_unit === "kg" ? "0.001" : "1"}
+step={productoSeleccionado.sale_unit === "kg" ? "0.001" : "1"}
           value={cantidadAgregar}
           onChange={(e) => setCantidadAgregar(e.target.value)}
-          placeholder="Ej. 24"
+placeholder={
+  productoSeleccionado.sale_unit === "kg"
+    ? "Ej. 2.500"
+    : "Ej. 24"
+}
           autoFocus
           className="mt-2 w-full rounded-xl border px-5 py-4 text-xl font-semibold outline-none transition focus:border-indigo-500"
         />
