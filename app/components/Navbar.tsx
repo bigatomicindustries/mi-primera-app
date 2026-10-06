@@ -10,18 +10,22 @@ const opciones = [
   {
     nombre: "Inicio",
     href: "/",
+    descripcion: "Resumen general de tu negocio",
   },
   {
     nombre: "Ventas",
     href: "/ventas",
+    descripcion: "Registra y cobra tus ventas",
   },
   {
     nombre: "Inventario",
     href: "/inventario",
+    descripcion: "Consulta productos y existencias",
   },
   {
     nombre: "Caja",
     href: "/caja",
+    descripcion: "Aperturas, movimientos y cierre",
   },
 ];
 
@@ -150,8 +154,11 @@ useEffect(() => {
             setMostrarMas((actual) => !actual);
             setMostrarUsuario(false);
           }}
-          className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 font-semibold text-slate-700 transition active:bg-slate-100"
-        >
+className={`flex h-11 items-center gap-2 rounded-xl border px-3 font-semibold transition ${
+  mostrarMas
+    ? "border-slate-900 bg-slate-900 text-white"
+    : "border-slate-200 bg-white text-slate-700 active:bg-slate-100"
+}`}        >
           <span
             aria-hidden="true"
             className="text-lg leading-none"
@@ -164,18 +171,20 @@ useEffect(() => {
           </span>
 
           <span
-            className={`text-xs text-slate-400 transition-transform duration-200 ${
-              mostrarMas ? "rotate-180" : ""
-            }`}
+className={`text-xs transition-transform duration-200 ${
+  mostrarMas
+    ? "rotate-180 text-slate-300"
+    : "text-slate-400"
+}`}
           >
             ▾
           </span>
         </button>
 
 
-        {mostrarMas && (
-<div className="fixed left-4 right-4 top-[5.5rem] z-50 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-            {/* NAVEGACIÓN PRINCIPAL */}
+
+{mostrarMas && (
+  <div className="fixed left-4 right-4 top-[5.5rem] z-50 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
 
             {opciones.map((opcion) => {
               const activo =
@@ -194,41 +203,23 @@ useEffect(() => {
                       : "text-slate-900 hover:bg-slate-50"
                   }`}
                 >
-                  <p className="text-sm font-semibold">
-                    {opcion.nombre}
-                  </p>
+<p className="text-sm font-semibold">
+  {opcion.nombre}
+</p>
+
+<p
+  className={`mt-1 text-xs ${
+    activo ? "text-slate-300" : "text-slate-500"
+  }`}
+>
+  {opcion.descripcion}
+</p>
                 </Link>
               );
             })}
 
 
             <div className="my-2 border-t border-slate-100" />
-
-
-            {/* SUPERADMIN */}
-
-            {esPlatformAdmin && (
-              <>
-                <Link
-                  href="/superadmin"
-                  onClick={() =>
-                    setMostrarMas(false)
-                  }
-                  className="block rounded-xl px-4 py-3 transition hover:bg-green-50"
-                >
-                  <p className="text-sm font-semibold text-green-700">
-                    Administración SaaS
-                  </p>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    Gestiona negocios de la plataforma
-                  </p>
-                </Link>
-
-                <div className="my-2 border-t border-slate-100" />
-              </>
-            )}
-
 
             {/* COMPRAS */}
 
@@ -305,6 +296,21 @@ useEffect(() => {
               </p>
             </Link>
 
+{perfil?.role === "admin" && (
+  <Link
+    href="/transferencias"
+    onClick={() => setMostrarMas(false)}
+    className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+  >
+    <p className="text-sm font-semibold text-slate-900">
+      Transferencias
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      Envía y recibe inventario entre sucursales
+    </p>
+  </Link>
+)}
 
             <Link
               href="/historial-cajas"
@@ -416,6 +422,21 @@ useEffect(() => {
                 </Link>
               )}
 
+{esPlatformAdmin && (
+  <Link
+    href="/superadmin"
+    onClick={() => setMostrarUsuario(false)}
+    className="block rounded-xl px-4 py-3 transition hover:bg-green-50"
+  >
+    <p className="text-sm font-semibold text-green-700">
+      Administración SaaS
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      Gestiona negocios de la plataforma
+    </p>
+  </Link>
+)}
 
               <button
                 type="button"
@@ -515,61 +536,44 @@ useEffect(() => {
             );
           })}
 
-          {/* MÁS */}
+{/* MÁS */}
 
-          <div
-            ref={menuMasRef}
-            className="relative"
-          >
-            <button
-              onClick={() => setMostrarMas(!mostrarMas)}
-              className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition ${
-pathname === "/compras" ||
-pathname === "/historial" ||
-pathname === "/movimientos" ||
-pathname === "/historial-cajas" ||
-pathname === "/usuarios" ||
-pathname.startsWith("/configuracion") ||
-pathname === "/superadmin"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              }`}
-            >
-              Más
+<div
+  ref={menuMasRef}
+  className="relative"
+>
+  <button
+    type="button"
+    onClick={() => {
+      setMostrarMas(!mostrarMas);
+      setMostrarUsuario(false);
+    }}
+    className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition ${
+      mostrarMas ||
+      pathname === "/compras" ||
+      pathname === "/historial" ||
+      pathname === "/movimientos" ||
+      pathname === "/transferencias" ||
+      pathname === "/historial-cajas" ||
+      pathname === "/usuarios" ||
+      pathname.startsWith("/configuracion")
+        ? "bg-slate-900 text-white"
+        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    }`}
+  >
+    Más
 
-              <span
-                className={`ml-2 inline-block text-xs transition-transform duration-200 ${
-                  mostrarMas
-                    ? "rotate-180"
-                    : "rotate-0"
-                }`}
-              >
-                ▾
-              </span>
-            </button>
+    <span
+      className={`ml-2 inline-block text-xs transition-transform duration-200 ${
+        mostrarMas ? "rotate-180" : "rotate-0"
+      }`}
+    >
+      ▾
+    </span>
+  </button>
 
 {mostrarMas && (
-  <div className="fixed left-4 right-4 top-[5.5rem] z-50 max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-            {esPlatformAdmin && (
-  <>
-    <Link
-      href="/superadmin"
-      onClick={() => setMostrarMas(false)}
-      className="block rounded-xl px-4 py-3 transition hover:bg-green-50"
-    >
-      <p className="text-sm font-semibold text-green-700">
-        Administración SaaS
-      </p>
-
-      <p className="mt-1 text-xs text-slate-500">
-        Gestiona negocios de la plataforma
-      </p>
-    </Link>
-
-    <div className="my-2 border-t border-slate-100" />
-  </>
-)}
-
+<div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border bg-white p-2 shadow-xl">
 {puedeAdministrar && (
   <Link
     href="/compras"
@@ -691,9 +695,10 @@ pathname === "/superadmin"
             >
               <button
                 type="button"
-                onClick={() =>
-                  setMostrarUsuario(!mostrarUsuario)
-                }
+onClick={() => {
+  setMostrarUsuario((actual) => !actual);
+  setMostrarMas(false);
+}}
                 className="flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-slate-100"
               >
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 font-bold text-green-700">
@@ -742,6 +747,22 @@ pathname === "/superadmin"
 
     <p className="mt-1 text-xs text-slate-500">
       Consulta tu plan y límites
+    </p>
+  </Link>
+)}
+
+{esPlatformAdmin && (
+  <Link
+    href="/superadmin"
+    onClick={() => setMostrarUsuario(false)}
+    className="block rounded-xl px-4 py-3 transition hover:bg-green-50"
+  >
+    <p className="text-sm font-semibold text-green-700">
+      Administración SaaS
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      Gestiona negocios de la plataforma
     </p>
   </Link>
 )}
