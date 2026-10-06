@@ -126,7 +126,7 @@ useEffect(() => {
         setMostrarUsuario(false);
       }}
     >
-      <p className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-600">
+      <p className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-green-600">
         {negocio?.name || "Mi Negocio"}
       </p>
 
@@ -214,9 +214,9 @@ useEffect(() => {
                   onClick={() =>
                     setMostrarMas(false)
                   }
-                  className="block rounded-xl px-4 py-3 transition hover:bg-indigo-50"
+                  className="block rounded-xl px-4 py-3 transition hover:bg-green-50"
                 >
-                  <p className="text-sm font-semibold text-indigo-700">
+                  <p className="text-sm font-semibold text-green-700">
                     Administración SaaS
                   </p>
 
@@ -362,7 +362,7 @@ useEffect(() => {
             }}
             className="flex h-11 max-w-[135px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 transition active:bg-slate-100"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-bold text-green-700">
               {perfil.full_name
                 .charAt(0)
                 .toUpperCase()}
@@ -439,7 +439,7 @@ useEffect(() => {
           href="/"
           className="shrink-0"
         >
-<p className="max-w-[220px] truncate text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">
+<p className="max-w-[220px] truncate text-xs font-bold uppercase tracking-[0.18em] text-green-600">
   {negocio?.name || "Mi Negocio"}
 </p>
 
@@ -469,7 +469,7 @@ useEffect(() => {
         onChange={(e) =>
           cambiarSucursal(e.target.value)
         }
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-indigo-400"
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-green-400"
         aria-label="Sucursal activa"
       >
         {sucursales.map((sucursal) => (
@@ -555,9 +555,9 @@ pathname === "/superadmin"
     <Link
       href="/superadmin"
       onClick={() => setMostrarMas(false)}
-      className="block rounded-xl px-4 py-3 transition hover:bg-indigo-50"
+      className="block rounded-xl px-4 py-3 transition hover:bg-green-50"
     >
-      <p className="text-sm font-semibold text-indigo-700">
+      <p className="text-sm font-semibold text-green-700">
         Administración SaaS
       </p>
 
@@ -696,7 +696,7 @@ pathname === "/superadmin"
                 }
                 className="flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-slate-100"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 font-bold text-green-700">
                   {perfil.full_name
                     .charAt(0)
                     .toUpperCase()}

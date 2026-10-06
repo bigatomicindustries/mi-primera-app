@@ -287,7 +287,7 @@ export default function IntegracionesPage() {
     <main className="min-h-screen bg-slate-50 px-6 py-12">
       <div className="mx-auto max-w-5xl">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
             {negocio?.name || "Mi negocio"}
           </p>
 

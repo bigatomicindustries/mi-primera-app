@@ -134,7 +134,7 @@ router.refresh();
       <div className="w-full max-w-md">
 
         <div className="mb-8 text-center">
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-indigo-600">
+          <p className="text-sm font-bold uppercase tracking-[0.25em] text-green-600">
             MI NEGOCIO
           </p>
 
@@ -177,7 +177,7 @@ router.refresh();
               placeholder="tu@negocio.com"
               required
               autoComplete="email"
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-green-500"
             />
           </div>
 
@@ -193,7 +193,7 @@ router.refresh();
               placeholder="••••••••"
               required
               autoComplete="current-password"
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-green-500"
             />
           </div>
 
@@ -224,7 +224,7 @@ router.refresh();
   type="button"
   onClick={reenviarConfirmacion}
   disabled={reenviando}
-  className="mt-4 w-full text-sm font-semibold text-indigo-600 transition hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+  className="mt-4 w-full text-sm font-semibold text-green-600 transition hover:text-green-700 disabled:cursor-not-allowed disabled:opacity-50"
 >
   {reenviando
     ? "Enviando correo..."
@@ -236,7 +236,7 @@ router.refresh();
     ¿Aún no tienes un negocio?{" "}
     <Link
       href="/registro"
-      className="font-semibold text-indigo-600 hover:text-indigo-700"
+      className="font-semibold text-green-600 hover:text-green-700"
     >
       Crear cuenta
     </Link>

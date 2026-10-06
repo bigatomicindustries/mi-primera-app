@@ -586,7 +586,7 @@ ${formatoDinero(subtotal)}`;
         {/* ENCABEZADO */}
 
         <div>
-          <p className="text-sm font-medium text-indigo-600">
+          <p className="text-sm font-medium text-green-600">
             MI NEGOCIO POS
           </p>
 
@@ -617,7 +617,7 @@ ${formatoDinero(subtotal)}`;
               placeholder="Buscar producto..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-indigo-500"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-green-500"
             />
 
             {/* ERROR */}
@@ -945,7 +945,7 @@ ${formatoDinero(subtotal)}`;
   setEfectivoRecibido("");
   setMostrarPago(true);
 }}
-  className="mt-6 w-full rounded-xl bg-indigo-600 px-5 py-4 text-lg font-semibold text-white"
+  className="mt-6 w-full rounded-xl bg-green-600 px-5 py-4 text-lg font-semibold text-white"
 >
   Cobrar {formatoDinero(total)}
 </button>
@@ -1159,7 +1159,7 @@ ${formatoDinero(subtotal)}`;
             setEfectivoRecibido("");
             setMostrarPago(true);
           }}
-          className="mt-4 w-full rounded-xl bg-indigo-600 px-5 py-4 text-lg font-semibold text-white"
+          className="mt-4 w-full rounded-xl bg-green-600 px-5 py-4 text-lg font-semibold text-white"
         >
           Cobrar {formatoDinero(total)}
         </button>
@@ -1184,7 +1184,7 @@ ${formatoDinero(subtotal)}`;
     <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
 
       <div className="mb-6">
-        <p className="text-sm font-medium text-indigo-600">
+        <p className="text-sm font-medium text-green-600">
           FINALIZAR VENTA
         </p>
 
@@ -1214,7 +1214,7 @@ ${formatoDinero(subtotal)}`;
     }}
     className={`rounded-xl border p-4 text-left transition ${
       metodoPago === "cash"
-        ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
+        ? "border-green-600 bg-green-50 ring-1 ring-green-600"
         : "border-slate-200 bg-white hover:bg-slate-50"
     }`}
   >
@@ -1239,7 +1239,7 @@ ${formatoDinero(subtotal)}`;
     }}
     className={`rounded-xl border p-4 text-left transition ${
       metodoPago === "card"
-        ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
+        ? "border-green-600 bg-green-50 ring-1 ring-green-600"
         : "border-slate-200 bg-white hover:bg-slate-50"
     }`}
   >
@@ -1264,7 +1264,7 @@ ${formatoDinero(subtotal)}`;
     disabled={!paymentSettings?.transfer_enabled}
     className={`rounded-xl border p-4 text-left transition ${
       metodoPago === "transfer"
-        ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
+        ? "border-green-600 bg-green-50 ring-1 ring-green-600"
         : "border-slate-200 bg-white hover:bg-slate-50"
     } ${
       !paymentSettings?.transfer_enabled
@@ -1305,7 +1305,7 @@ ${formatoDinero(subtotal)}`;
     }
   }}
   placeholder="0.00"
-  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-4 text-2xl font-bold outline-none focus:border-indigo-500"
+  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-4 text-2xl font-bold outline-none focus:border-green-500"
 />
 
       <div className="mt-4">
@@ -1322,7 +1322,7 @@ ${formatoDinero(subtotal)}`;
           const actual = Number(efectivoRecibido) || 0;
           setEfectivoRecibido(String(actual + billete));
         }}
-        className="rounded-xl border border-slate-200 bg-white px-3 py-3 font-semibold text-slate-700 transition hover:border-indigo-500 hover:bg-indigo-50 active:scale-95"
+        className="rounded-xl border border-slate-200 bg-white px-3 py-3 font-semibold text-slate-700 transition hover:border-green-500 hover:bg-green-50 active:scale-95"
       >
         ${billete}
       </button>
@@ -1457,7 +1457,7 @@ ${formatoDinero(subtotal)}`;
     metodoPago === "cash" &&
     (efectivoInsuficiente || efectivo <= 0)
   }
-  className="mt-6 w-full rounded-xl bg-indigo-600 px-5 py-4 text-lg font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+  className="mt-6 w-full rounded-xl bg-green-600 px-5 py-4 text-lg font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
 >
   {metodoPago === "cash"
     ? "Confirmar cobro"
@@ -1609,7 +1609,7 @@ onClick={() => {
   setWhatsappTransferencia("");
   setErrorTransferencia("");
 }}
-          className="w-full rounded-xl bg-indigo-600 px-5 py-4 text-lg font-semibold text-white transition hover:bg-indigo-700"
+          className="w-full rounded-xl bg-green-600 px-5 py-4 text-lg font-semibold text-white transition hover:bg-green-700"
         >
           Nueva venta
         </button>

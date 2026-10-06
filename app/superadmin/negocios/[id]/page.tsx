@@ -399,7 +399,7 @@ setPlanes(
         <div className="mx-auto max-w-6xl">
           <Link
             href="/superadmin"
-            className="text-sm font-semibold text-indigo-600"
+            className="text-sm font-semibold text-green-600"
           >
             ← Volver a negocios
           </Link>
@@ -423,14 +423,14 @@ setPlanes(
       <div className="mx-auto max-w-6xl">
         <Link
           href="/superadmin"
-          className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          className="text-sm font-semibold text-green-600 hover:text-green-700"
         >
           ← Volver a negocios
         </Link>
 
         <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-600">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-green-600">
               Administración SaaS
             </p>
 
@@ -535,7 +535,7 @@ setPlanes(
         setPlanSeleccionado(e.target.value)
       }
       disabled={guardandoPlan}
-      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-indigo-500 sm:max-w-xs"
+      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-green-500 sm:max-w-xs"
     >
       {planes.map((plan) => (
         <option
@@ -557,7 +557,7 @@ setPlanes(
         !planSeleccionado ||
         planSeleccionado === suscripcion.plan_id
       }
-      className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+      className="rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
     >
       {guardandoPlan
         ? "Guardando..."
@@ -630,7 +630,7 @@ setPlanes(
         onChange={(e) =>
           setTimezoneSeleccionado(e.target.value)
         }
-        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500"
+        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-green-500"
       >
         <option value="America/Mexico_City">
           Ciudad de México
@@ -664,7 +664,7 @@ setPlanes(
     guardandoTimezone ||
     timezoneSeleccionado === negocio.timezone
   }
-  className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+  className="mt-3 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
 >
   {guardandoTimezone
     ? "Guardando..."
@@ -814,7 +814,7 @@ setPlanes(
               </td>
 
               <td className="px-6 py-4">
-                <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
                   {usuario.role === "admin"
                     ? "Administrador"
                     : usuario.role === "manager"

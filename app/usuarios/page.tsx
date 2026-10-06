@@ -339,7 +339,7 @@ async function guardarSucursalesEmpleado() {
 
 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
   <div>
-    <p className="text-sm font-medium uppercase tracking-wide text-indigo-600">
+    <p className="text-sm font-medium uppercase tracking-wide text-green-600">
       Mi Negocio POS
     </p>
 
@@ -364,7 +364,7 @@ onClick={() => {
 
   setMostrarNuevoEmpleado(true);
 }}
-    className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700"
+    className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
   >
     + Nuevo empleado
   </button>
@@ -412,7 +412,7 @@ onClick={() => {
               Administradores
             </p>
 
-            <p className="mt-2 text-3xl font-bold text-indigo-600">
+            <p className="mt-2 text-3xl font-bold text-green-600">
               {
                 empleados.filter(
                   (e) => e.role === "admin" && e.active
@@ -470,7 +470,7 @@ onClick={() => {
 
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 font-bold text-green-700">
                             {empleado.full_name
                               .charAt(0)
                               .toUpperCase()}
@@ -483,7 +483,7 @@ onClick={() => {
                               </p>
 
                               {esYo && (
-                                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
                                   Tú
                                 </span>
                               )}
@@ -537,7 +537,7 @@ onClick={() => {
         return (
           <span
             key={branchId}
-            className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700"
+            className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
           >
             {sucursal.name}
           </span>
@@ -565,7 +565,7 @@ onClick={() => {
         empleado.branch_ids ?? []
       );
     }}
-    className="mt-3 text-xs font-semibold text-indigo-600 transition hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+    className="mt-3 text-xs font-semibold text-green-600 transition hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
   >
     Editar sucursales
   </button>
@@ -646,7 +646,7 @@ onClick={() => {
       className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
-      <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+      <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
         Nuevo empleado
       </p>
 
@@ -670,7 +670,7 @@ onClick={() => {
         placeholder="Ej. Juan Pérez"
         autoFocus
         disabled={creandoEmpleado}
-        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500 disabled:bg-slate-100"
+        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500 disabled:bg-slate-100"
       />
 
       <label className="mt-5 block text-sm font-medium text-slate-700">
@@ -683,7 +683,7 @@ onClick={() => {
         onChange={(e) => setNuevoEmail(e.target.value)}
         placeholder="empleado@negocio.com"
         disabled={creandoEmpleado}
-        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500 disabled:bg-slate-100"
+        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500 disabled:bg-slate-100"
       />
 
       <label className="mt-5 block text-sm font-medium text-slate-700">
@@ -696,7 +696,7 @@ onClick={() => {
         onChange={(e) => setNuevaPassword(e.target.value)}
         placeholder="Mínimo 8 caracteres"
         disabled={creandoEmpleado}
-        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500 disabled:bg-slate-100"
+        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500 disabled:bg-slate-100"
       />
 
       <p className="mt-2 text-xs text-slate-400">
@@ -712,7 +712,7 @@ onClick={() => {
         value={nuevoRol}
         onChange={(e) => setNuevoRol(e.target.value as Rol)}
         disabled={creandoEmpleado}
-        className="mt-2 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-indigo-500 disabled:bg-slate-100"
+        className="mt-2 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-green-500 disabled:bg-slate-100"
       >
         <option value="cashier">Cajero</option>
         <option value="manager">Gerente</option>
@@ -780,7 +780,7 @@ onClick={() => {
         type="button"
         onClick={crearEmpleado}
         disabled={creandoEmpleado}
-        className="mt-7 w-full rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+        className="mt-7 w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
       >
         {creandoEmpleado
           ? "Creando empleado..."
@@ -895,7 +895,7 @@ onClick={() => {
             sucursalesEditadas.length === 0
           }
           onClick={() => void guardarSucursalesEmpleado()}
-          className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 rounded-xl bg-green-600 px-4 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {guardandoSucursales
             ? "Guardando..."

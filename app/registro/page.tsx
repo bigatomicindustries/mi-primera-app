@@ -243,7 +243,7 @@ setRegistroExitoso(true);
       <div className="w-full max-w-md">
 
         <div className="mb-8 text-center">
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-indigo-600">
+          <p className="text-sm font-bold uppercase tracking-[0.25em] text-green-600">
             MI NEGOCIO
           </p>
 
@@ -274,7 +274,7 @@ setRegistroExitoso(true);
               placeholder="Abarrotes Los Pinos"
               required
               autoComplete="organization"
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-green-500"
             />
           </div>
 
@@ -292,7 +292,7 @@ setRegistroExitoso(true);
               placeholder="Juan Pérez"
               required
               autoComplete="name"
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-green-500"
             />
           </div>
 
@@ -310,7 +310,7 @@ setRegistroExitoso(true);
               placeholder="tu@negocio.com"
               required
               autoComplete="email"
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-green-500"
             />
           </div>
 
@@ -329,7 +329,7 @@ setRegistroExitoso(true);
               required
               minLength={8}
               autoComplete="new-password"
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none transition focus:border-green-500"
             />
 
             <p className="mt-2 text-xs text-slate-400">
@@ -362,7 +362,7 @@ setRegistroExitoso(true);
           ¿Ya tienes una cuenta?{" "}
           <Link
             href="/login"
-            className="font-semibold text-indigo-600 hover:text-indigo-700"
+            className="font-semibold text-green-600 hover:text-green-700"
           >
             Iniciar sesión
           </Link>

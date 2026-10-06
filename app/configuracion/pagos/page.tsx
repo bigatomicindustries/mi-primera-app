@@ -224,7 +224,7 @@ export default function ConfiguracionPagosPage() {
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-4xl">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
             Configuración
           </p>
 
@@ -273,7 +273,7 @@ export default function ConfiguracionPagosPage() {
                       e.target.checked
                     )
                   }
-                  className="h-5 w-5 rounded border-slate-300 text-indigo-600"
+                  className="h-5 w-5 rounded border-slate-300 text-green-600"
                 />
 
                 <span className="text-sm font-semibold text-slate-700">
@@ -296,7 +296,7 @@ export default function ConfiguracionPagosPage() {
                   setBanco(e.target.value)
                 }
                 placeholder="Ej. BBVA"
-                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
               />
             </div>
 
@@ -312,7 +312,7 @@ export default function ConfiguracionPagosPage() {
                   setTitular(e.target.value)
                 }
                 placeholder="Nombre del titular"
-                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
               />
             </div>
 
@@ -334,7 +334,7 @@ export default function ConfiguracionPagosPage() {
                 }
                 placeholder="18 dígitos"
                 maxLength={18}
-                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-mono text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-mono text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
               />
 
               <div className="mt-2 flex justify-between gap-4">
@@ -372,7 +372,7 @@ export default function ConfiguracionPagosPage() {
                   )
                 }
                 placeholder="Número de cuenta"
-                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-mono text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-mono text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
               />
             </div>
 
@@ -425,7 +425,7 @@ export default function ConfiguracionPagosPage() {
               type="button"
               onClick={guardarConfiguracion}
               disabled={guardando}
-              className="rounded-xl bg-indigo-600 px-6 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {guardando
                 ? "Guardando..."

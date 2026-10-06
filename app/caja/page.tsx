@@ -479,7 +479,7 @@ const diferencia = contado - efectivoEsperado;
     <main className="min-h-screen bg-slate-50 p-5 text-slate-900 md:p-10">
       <div className="mx-auto max-w-6xl">
 
-        <p className="text-sm font-medium text-indigo-600">
+        <p className="text-sm font-medium text-green-600">
           MI NEGOCIO POS
         </p>
 
@@ -523,14 +523,14 @@ const diferencia = contado - efectivoEsperado;
           value={fondoInicial}
           onChange={(e) => setFondoInicial(e.target.value)}
           placeholder="500.00"
-          className="w-full rounded-xl border px-8 py-3 outline-none focus:border-indigo-500"
+          className="w-full rounded-xl border px-8 py-3 outline-none focus:border-green-500"
         />
       </div>
 
       <button
         onClick={abrirCaja}
         disabled={abriendoCaja}
-        className="mt-4 w-full rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white disabled:opacity-50"
+        className="mt-4 w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white disabled:opacity-50"
       >
         {abriendoCaja ? "Abriendo..." : "Abrir caja"}
       </button>
@@ -681,7 +681,7 @@ const diferencia = contado - efectivoEsperado;
             Tarjeta
           </p>
 
-          <p className="mt-1 text-2xl font-bold text-indigo-600">
+          <p className="mt-1 text-2xl font-bold text-green-600">
             {formatoDinero(totalVentasTarjeta)}
           </p>
         </div>
@@ -949,7 +949,7 @@ const diferencia = contado - efectivoEsperado;
             setMontoMovimiento(e.target.value)
           }
           placeholder="0.00"
-          className="w-full rounded-xl border px-8 py-3 text-lg font-semibold outline-none focus:border-indigo-500"
+          className="w-full rounded-xl border px-8 py-3 text-lg font-semibold outline-none focus:border-green-500"
         />
       </div>
 
@@ -968,7 +968,7 @@ const diferencia = contado - efectivoEsperado;
             ? "Ej. Cambio agregado a caja"
             : "Ej. Pago a proveedor"
         }
-        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+        className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
       />
 
       <button
@@ -1004,7 +1004,7 @@ const diferencia = contado - efectivoEsperado;
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
 
-      <p className="text-sm font-semibold text-indigo-600">
+      <p className="text-sm font-semibold text-green-600">
         CIERRE DE CAJA
       </p>
 
@@ -1046,7 +1046,7 @@ const diferencia = contado - efectivoEsperado;
       Ventas con tarjeta
     </span>
 
-    <span className="font-semibold text-indigo-600">
+    <span className="font-semibold text-green-600">
       {formatoDinero(totalVentasTarjeta)}
     </span>
   </div>
@@ -1130,7 +1130,7 @@ const diferencia = contado - efectivoEsperado;
             }
           }}
           placeholder="0.00"
-          className="w-full rounded-xl border px-8 py-4 text-2xl font-bold outline-none focus:border-indigo-500"
+          className="w-full rounded-xl border px-8 py-4 text-2xl font-bold outline-none focus:border-green-500"
         />
       </div>
 

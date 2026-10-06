@@ -520,7 +520,7 @@ const efectivoEsperadoCaja =
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
 
           <div>
-<p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+<p className="text-sm font-semibold uppercase tracking-wide text-green-600">
   {negocio?.name
     ? `${negocio.name} POS`
     : "MI NEGOCIO POS"}
@@ -566,7 +566,7 @@ const efectivoEsperadoCaja =
 
           <Link
             href="/ventas"
-            className="rounded-xl bg-indigo-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-indigo-700"
+            className="rounded-xl bg-green-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-green-700"
           >
             + Nueva venta
           </Link>
@@ -646,10 +646,10 @@ const efectivoEsperadoCaja =
 
     <Link
       href="/ventas"
-      className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
+      className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-sm"
     >
       <div className="flex items-center gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 text-xl">
           🛒
         </div>
 
@@ -668,10 +668,10 @@ const efectivoEsperadoCaja =
 {puedeAdministrar && (
   <Link
     href="/inventario"
-    className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
+    className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-sm"
   >
     <div className="flex items-center gap-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 text-xl">
         📦
       </div>
 
@@ -690,10 +690,10 @@ const efectivoEsperadoCaja =
 
     <Link
   href="/historial"
-  className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
+  className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-sm"
 >
   <div className="flex items-center gap-4">
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl">
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 text-xl">
       🧾
     </div>
 
@@ -711,7 +711,7 @@ const efectivoEsperadoCaja =
 
     <Link
       href="/caja"
-      className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm"
+      className="group rounded-2xl border bg-white p-5 transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-sm"
     >
       <div className="flex items-center gap-4">
         <div
@@ -989,7 +989,7 @@ const efectivoEsperadoCaja =
     )}
   </p>
 
-  <p className="mt-1 text-xs font-medium text-indigo-600">
+  <p className="mt-1 text-xs font-medium text-green-600">
     Ver detalle →
   </p>
 </div>

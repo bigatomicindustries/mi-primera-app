@@ -140,7 +140,7 @@ console.error(
       <div className="mx-auto max-w-6xl">
 
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-600">
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-green-600">
             Administración SaaS
           </p>
 

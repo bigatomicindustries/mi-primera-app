@@ -586,7 +586,7 @@ const { data, error } = await supabase.rpc(
 <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
 
   <div>
-    <p className="text-sm font-medium uppercase tracking-wide text-indigo-600">
+    <p className="text-sm font-medium uppercase tracking-wide text-green-600">
       Mi Negocio POS
     </p>
 
@@ -605,7 +605,7 @@ const { data, error } = await supabase.rpc(
       setError("");
       setMostrarNuevoProducto(true);
     }}
-    className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700"
+    className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
   >
     + Nuevo producto
   </button>
@@ -684,7 +684,7 @@ const { data, error } = await supabase.rpc(
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar producto o código de barras..."
-            className="w-full rounded-xl border bg-white px-5 py-4 outline-none transition focus:border-indigo-500"
+            className="w-full rounded-xl border bg-white px-5 py-4 outline-none transition focus:border-green-500"
           />
         </div>
 
@@ -819,7 +819,7 @@ const { data, error } = await supabase.rpc(
           setCantidadAgregar("");
           setError("");
         }}
-        className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+        className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
       >
         + Existencias
       </button>
@@ -856,7 +856,7 @@ const { data, error } = await supabase.rpc(
 
     <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-7 shadow-2xl">
 
-      <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+      <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
         Inventario
       </p>
 
@@ -887,7 +887,7 @@ const { data, error } = await supabase.rpc(
             }
             placeholder="Ej. Coca Cola 600 ml"
             autoFocus
-            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
           />
         </div>
 
@@ -907,7 +907,7 @@ const { data, error } = await supabase.rpc(
               })
             }
             placeholder="Opcional"
-            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
           />
         </div>
 
@@ -931,7 +931,7 @@ const { data, error } = await supabase.rpc(
                 })
               }
               placeholder="0.00"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
             />
           </div>
 
@@ -952,7 +952,7 @@ const { data, error } = await supabase.rpc(
                 })
               }
               placeholder="0.00"
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
             />
           </div>
 
@@ -998,7 +998,7 @@ const { data, error } = await supabase.rpc(
                 })
               }
               placeholder={nuevoProducto.sale_unit === "kg" ? "0.000" : "5"}
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
             />
           </div>
 
@@ -1019,7 +1019,7 @@ const { data, error } = await supabase.rpc(
                 })
               }
               placeholder={nuevoProducto.sale_unit === "kg" ? "0.000" : "5"}
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
             />
           </div>
 
@@ -1037,7 +1037,7 @@ const { data, error } = await supabase.rpc(
     <button
       onClick={crearProducto}
         disabled={guardandoProducto}
-        className="mt-7 w-full rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+        className="mt-7 w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
       >
         {guardandoProducto
           ? "Guardando..."
@@ -1064,7 +1064,7 @@ const { data, error } = await supabase.rpc(
 
     <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-7 shadow-2xl">
 
-      <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+      <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
         Inventario
       </p>
 
@@ -1092,7 +1092,7 @@ const { data, error } = await supabase.rpc(
                 name: e.target.value,
               })
             }
-            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
           />
         </div>
 
@@ -1111,7 +1111,7 @@ const { data, error } = await supabase.rpc(
               })
             }
             placeholder="Opcional"
-            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
           />
         </div>
 
@@ -1133,7 +1133,7 @@ const { data, error } = await supabase.rpc(
                   cost_price: e.target.value,
                 })
               }
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
             />
           </div>
 
@@ -1153,7 +1153,7 @@ const { data, error } = await supabase.rpc(
                   sale_price: e.target.value,
                 })
               }
-              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+              className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
             />
           </div>
 
@@ -1195,7 +1195,7 @@ const { data, error } = await supabase.rpc(
                 minimum_stock: e.target.value,
               })
             }
-            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
           />
         </div>
 
@@ -1226,7 +1226,7 @@ const { data, error } = await supabase.rpc(
       <button
         onClick={guardarEdicion}
         disabled={guardandoEdicion}
-        className="mt-6 w-full rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+        className="mt-6 w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
       >
         {guardandoEdicion
           ? "Guardando..."
@@ -1396,7 +1396,7 @@ const { data, error } = await supabase.rpc(
 
     <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl">
 
-      <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+      <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
         Reponer inventario
       </p>
 
@@ -1428,7 +1428,7 @@ placeholder={
     : "Ej. 24"
 }
           autoFocus
-          className="mt-2 w-full rounded-xl border px-5 py-4 text-xl font-semibold outline-none transition focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border px-5 py-4 text-xl font-semibold outline-none transition focus:border-green-500"
         />
       </div>
 
@@ -1476,7 +1476,7 @@ placeholder={
           !cantidadAgregar ||
           Number(cantidadAgregar) <= 0
         }
-        className="mt-6 w-full rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+        className="mt-6 w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
       >
         {guardandoStock
           ? "Guardando..."

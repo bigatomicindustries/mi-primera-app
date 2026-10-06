@@ -317,7 +317,7 @@ window.location.href = data.checkout_url;
         {/* ENCABEZADO */}
 
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
             {negocio?.name || "Mi negocio"}
           </p>
 
@@ -389,7 +389,7 @@ window.location.href = data.checkout_url;
                 className={
                   usuariosAlLimite
                     ? "h-full rounded-full bg-amber-500 transition-all"
-                    : "h-full rounded-full bg-indigo-600 transition-all"
+                    : "h-full rounded-full bg-green-600 transition-all"
                 }
                 style={{
                   width: `${porcentajeUsuarios}%`,
@@ -445,7 +445,7 @@ window.location.href = data.checkout_url;
                 className={
                   productosAlLimite
                     ? "h-full rounded-full bg-amber-500 transition-all"
-                    : "h-full rounded-full bg-indigo-600 transition-all"
+                    : "h-full rounded-full bg-green-600 transition-all"
                 }
                 style={{
                   width: `${porcentajeProductos}%`,

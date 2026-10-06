@@ -720,7 +720,7 @@ const transferenciaValida =
     <main className="min-h-screen bg-slate-50 p-4 sm:p-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <p className="text-sm font-semibold text-indigo-600">
+          <p className="text-sm font-semibold text-green-600">
             Inventario
           </p>
 
@@ -781,7 +781,7 @@ const transferenciaValida =
                     setBusqueda(e.target.value)
                   }
                   placeholder="Nombre o código de barras"
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-green-400 focus:ring-4 focus:ring-green-100"
                 />
               </div>
 
@@ -827,7 +827,7 @@ const transferenciaValida =
       (item) => item.id === producto.id
     )
       ? "cursor-not-allowed bg-slate-100 text-slate-400"
-      : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+      : "bg-green-50 text-green-700 hover:bg-green-100"
   }`}
 >
   {items.some(
@@ -958,7 +958,7 @@ const transferenciaValida =
                     e.target.value
                   )
                 }
-                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-green-400 focus:ring-4 focus:ring-green-100"
               />
 
               <span className="w-14 text-xs text-slate-500">
@@ -982,7 +982,7 @@ const transferenciaValida =
   }
   className={`mt-5 w-full rounded-xl px-4 py-3 font-semibold transition ${
     transferenciaValida && !enviando
-      ? "bg-indigo-600 text-white hover:bg-indigo-700"
+      ? "bg-green-600 text-white hover:bg-green-700"
       : "cursor-not-allowed bg-slate-200 text-slate-500"
   }`}
 >
@@ -999,7 +999,7 @@ const transferenciaValida =
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
   <div>
-    <p className="text-sm font-semibold text-indigo-600">
+    <p className="text-sm font-semibold text-green-600">
       Recepciones
     </p>
 
@@ -1102,7 +1102,7 @@ const transferenciaValida =
 {sucursalActiva && (
   <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <div>
-      <p className="text-sm font-semibold text-indigo-600">
+      <p className="text-sm font-semibold text-green-600">
         Historial
       </p>
 
@@ -1151,7 +1151,7 @@ const transferenciaValida =
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                           esSalida
-                            ? "bg-indigo-50 text-indigo-700"
+                            ? "bg-green-50 text-green-700"
                             : "bg-emerald-50 text-emerald-700"
                         }`}
                       >

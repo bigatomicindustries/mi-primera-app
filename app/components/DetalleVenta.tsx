@@ -609,7 +609,7 @@ ${
 
         <div className="flex items-start justify-between gap-6">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+            <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
               Detalle de venta
             </p>
 
@@ -974,7 +974,7 @@ ${
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-indigo-600">
+          <p className="text-sm font-medium text-green-600">
             DEVOLUCIÓN
           </p>
 
@@ -1075,7 +1075,7 @@ ${
                         )
                       }
                       placeholder="0"
-                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-lg font-semibold outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-lg font-semibold outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
                     />
 
                     <span className="whitespace-nowrap text-sm text-slate-500">
@@ -1156,7 +1156,7 @@ ${
   type="button"
   onClick={abrirConfirmacionDevolucion}
   disabled={itemsSeleccionadosDevolucion.length === 0}
-  className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+  className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
 >
   Continuar
 </button>
@@ -1288,7 +1288,7 @@ onChange={(e) => {
           rows={3}
           maxLength={500}
           placeholder="Opcional. Ej. Producto equivocado, cambio del cliente..."
-          className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
         />
 
         <p className="mt-1 text-right text-xs text-slate-400">

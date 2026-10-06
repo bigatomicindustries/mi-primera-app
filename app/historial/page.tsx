@@ -242,7 +242,7 @@ async function abrirVenta(venta: Venta) {
       <div className="mx-auto max-w-5xl">
 
         <div className="mb-8">
-          <p className="text-sm font-medium text-indigo-600">
+          <p className="text-sm font-medium text-green-600">
             MI NEGOCIO POS
           </p>
 
@@ -270,7 +270,7 @@ async function abrirVenta(venta: Venta) {
 
       await cargarVentas(branchId);
     }}
-    className="w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-indigo-500 md:max-w-sm"
+    className="w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-green-500 md:max-w-sm"
   >
     {sucursalesHistorial.map((sucursal) => (
       <option
@@ -341,7 +341,7 @@ async function abrirVenta(venta: Venta) {
   <span
     className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
       venta.payment_method === "card"
-        ? "bg-indigo-100 text-indigo-700"
+        ? "bg-green-100 text-green-700"
         : venta.payment_method === "transfer"
         ? "bg-emerald-100 text-emerald-700"
         : "bg-green-100 text-green-700"

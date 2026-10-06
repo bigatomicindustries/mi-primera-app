@@ -357,7 +357,7 @@ const cajaActual = sesiones.find(
 
         <div className="flex items-start justify-between gap-6">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+            <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
               MI NEGOCIO POS
             </p>
 
@@ -387,7 +387,7 @@ const cajaActual = sesiones.find(
 
       await cargarHistorial(branchId);
     }}
-    className="w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-indigo-500 md:min-w-72"
+    className="w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-green-500 md:min-w-72"
   >
     {sucursalesHistorial.map((sucursal) => (
       <option
@@ -458,7 +458,7 @@ const cajaActual = sesiones.find(
   disabled={!cajaActual}
   className={`rounded-2xl border bg-white p-6 text-left transition ${
     cajaActual
-      ? "cursor-pointer hover:border-indigo-300 hover:shadow-md"
+      ? "cursor-pointer hover:border-green-300 hover:shadow-md"
       : "cursor-default"
   }`}
 >
@@ -480,7 +480,7 @@ const cajaActual = sesiones.find(
     </div>
 
     {cajaActual && (
-      <span className="text-sm font-semibold text-indigo-600">
+      <span className="text-sm font-semibold text-green-600">
         Ver detalle →
       </span>
     )}
@@ -681,7 +681,7 @@ const salidasCaja = movimientosSesion
       >
         <div className="flex items-start justify-between gap-6">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+            <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
               Detalle de caja
             </p>
 
@@ -819,7 +819,7 @@ const salidasCaja = movimientosSesion
     Ventas con tarjeta
   </span>
 
-  <span className="font-semibold text-indigo-600">
+  <span className="font-semibold text-green-600">
     {formatoDinero(totalVentasTarjeta)}
   </span>
 </div>
@@ -1063,7 +1063,7 @@ const salidasCaja = movimientosSesion
     {formatoDinero(Number(venta.total))}
   </p>
 
-  <p className="mt-1 text-xs font-medium text-indigo-600">
+  <p className="mt-1 text-xs font-medium text-green-600">
     Ver venta →
   </p>
 </div>

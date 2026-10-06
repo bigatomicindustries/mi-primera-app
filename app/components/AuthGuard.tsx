@@ -70,7 +70,7 @@ export default function AuthGuard({
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-green-600" />
 
           <p className="mt-4 text-sm font-medium text-slate-500">
             Verificando sesión...

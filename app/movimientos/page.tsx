@@ -248,7 +248,7 @@ function nombreTipo(tipo: Movimiento["movement_type"]) {
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
 
           <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-indigo-600">
+            <p className="text-sm font-medium uppercase tracking-wide text-green-600">
               Mi Negocio POS
             </p>
 
@@ -329,7 +329,7 @@ function nombreTipo(tipo: Movimiento["movement_type"]) {
 
     await cargarMovimientos(branchId);
   }}
-  className="rounded-xl border bg-white px-5 py-4 outline-none focus:border-indigo-500"
+  className="rounded-xl border bg-white px-5 py-4 outline-none focus:border-green-500"
 >
   {sucursalesHistorial.map((sucursal) => (
     <option
@@ -347,7 +347,7 @@ function nombreTipo(tipo: Movimiento["movement_type"]) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar producto, código o movimiento..."
-            className="flex-1 rounded-xl border bg-white px-5 py-4 outline-none transition focus:border-indigo-500"
+            className="flex-1 rounded-xl border bg-white px-5 py-4 outline-none transition focus:border-green-500"
           />
 
           <select
@@ -355,7 +355,7 @@ function nombreTipo(tipo: Movimiento["movement_type"]) {
             onChange={(e) =>
               setFiltroTipo(e.target.value as FiltroTipo)
             }
-            className="rounded-xl border bg-white px-5 py-4 outline-none focus:border-indigo-500"
+            className="rounded-xl border bg-white px-5 py-4 outline-none focus:border-green-500"
           >
             <option value="all">
               Todos los movimientos

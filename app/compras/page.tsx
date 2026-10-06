@@ -1253,7 +1253,7 @@ return (
 
         <div className="flex items-start justify-between gap-6">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+            <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
               MI NEGOCIO POS
             </p>
 
@@ -1269,7 +1269,7 @@ return (
           <button
   type="button"
   onClick={abrirNuevaCompra}
-  className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700"
+  className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
 >
   + Nueva compra
 </button>
@@ -1379,7 +1379,7 @@ return (
 
       <div className="flex items-start justify-between gap-6">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
             Compra de mercancía
           </p>
 
@@ -1417,7 +1417,7 @@ return (
         setEmailProveedor("");
         setMostrarNuevoProveedor(true);
       }}
-      className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+      className="text-sm font-semibold text-green-600 hover:text-green-700"
     >
       + Nuevo proveedor
     </button>
@@ -1426,7 +1426,7 @@ return (
   <select
     value={proveedorId}
     onChange={(e) => setProveedorId(e.target.value)}
-    className="mt-2 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-indigo-500"
+    className="mt-2 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-green-500"
   >
     <option value="">
       Sin proveedor
@@ -1456,7 +1456,7 @@ return (
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Nombre o código de barras"
           autoFocus
-          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
         />
 
         {busqueda.trim() !== "" && (
@@ -1476,7 +1476,7 @@ return (
       setPrecioNuevoProducto("");
       setMostrarNuevoProducto(true);
     }}
-    className="mt-3 w-full rounded-xl bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100"
+    className="mt-3 w-full rounded-xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-600 transition hover:bg-green-100"
   >
     + Crear nuevo producto
   </button>
@@ -1571,7 +1571,7 @@ return (
                           Number(e.target.value)
                         )
                       }
-                      className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:border-indigo-500"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:border-green-500"
                     />
                   </div>
 
@@ -1591,7 +1591,7 @@ return (
                           Number(e.target.value)
                         )
                       }
-                      className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:border-indigo-500"
+                      className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:border-green-500"
                     />
                   </div>
 
@@ -1625,7 +1625,7 @@ return (
           value={notas}
           onChange={(e) => setNotas(e.target.value)}
           placeholder="Ej. Compra semanal"
-          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
         />
       </div>
 
@@ -1727,7 +1727,7 @@ return (
   type="button"
   onClick={registrarCompra}
   disabled={itemsCompra.length === 0 || guardando}
-  className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+  className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
 >
   {guardando
     ? "Registrando..."
@@ -1749,7 +1749,7 @@ return (
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
             Proveedores
           </p>
 
@@ -1780,7 +1780,7 @@ return (
             setNombreProveedor(e.target.value)
           }
           placeholder="Ej. Abarrotes La Central"
-          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
         />
       </div>
 
@@ -1796,7 +1796,7 @@ return (
             setTelefonoProveedor(e.target.value)
           }
           placeholder="Ej. 55 1234 5678"
-          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
         />
       </div>
 
@@ -1812,7 +1812,7 @@ return (
             setEmailProveedor(e.target.value)
           }
           placeholder="proveedor@ejemplo.com"
-          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
         />
       </div>
 
@@ -1833,7 +1833,7 @@ return (
             guardandoProveedor ||
             nombreProveedor.trim() === ""
           }
-          className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {guardandoProveedor
             ? "Guardando..."
@@ -1855,7 +1855,7 @@ return (
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
             Inventario
           </p>
 
@@ -1892,7 +1892,7 @@ return (
             setNombreNuevoProducto(e.target.value)
           }
           placeholder="Ej. Doritos Nacho"
-          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
         />
       </div>
 
@@ -1910,7 +1910,7 @@ return (
             setCodigoNuevoProducto(e.target.value)
           }
           placeholder="Opcional"
-          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
         />
       </div>
 
@@ -1931,7 +1931,7 @@ return (
               setCostoNuevoProducto(e.target.value)
             }
             placeholder="0.00"
-            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
           />
         </div>
 
@@ -1949,12 +1949,12 @@ return (
               setPrecioNuevoProducto(e.target.value)
             }
             placeholder="0.00"
-            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"
+            className="mt-2 w-full rounded-xl border px-4 py-3 outline-none focus:border-green-500"
           />
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl bg-indigo-50 p-4 text-sm text-indigo-700">
+      <div className="mt-4 rounded-xl bg-green-50 p-4 text-sm text-green-700">
         El producto se creará con stock 0. La cantidad recibida
         se sumará al registrar esta compra.
       </div>
@@ -1978,7 +1978,7 @@ return (
             guardandoProducto ||
             nombreNuevoProducto.trim() === ""
           }
-          className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {guardandoProducto
             ? "Creando..."
@@ -2005,7 +2005,7 @@ return (
 
       <div className="flex items-start justify-between gap-6">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
             Detalle de compra
           </p>
 
@@ -2122,7 +2122,7 @@ return (
       type="button"
       onClick={abrirDevolucion}
       disabled={cargandoDevolucion}
-      className="w-full rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+      className="w-full rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
     >
       {cargandoDevolucion
         ? "Preparando..."
@@ -2175,7 +2175,7 @@ return (
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
             Devolución a proveedor
           </p>
 
@@ -2251,12 +2251,12 @@ return (
                 </p>
               </div>
 
-              <div className="rounded-xl bg-indigo-50 p-3">
-                <p className="text-xs text-indigo-500">
+              <div className="rounded-xl bg-green-50 p-3">
+                <p className="text-xs text-green-500">
                   Disponibles
                 </p>
 
-                <p className="mt-1 font-bold text-indigo-700">
+                <p className="mt-1 font-bold text-green-700">
                   {item.quantity_available}
                 </p>
               </div>
@@ -2300,7 +2300,7 @@ return (
                     )
                   );
                 }}
-                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none transition focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-400"
+                className="mt-2 w-full rounded-xl border px-4 py-3 outline-none transition focus:border-green-500 disabled:bg-slate-100 disabled:text-slate-400"
               />
             </div>
 
@@ -2397,7 +2397,7 @@ return (
         }
         placeholder="Ej. Mercancía dañada, producto incorrecto..."
         rows={3}
-        className="mt-2 w-full resize-none rounded-xl border px-4 py-3 outline-none transition focus:border-indigo-500"
+        className="mt-2 w-full resize-none rounded-xl border px-4 py-3 outline-none transition focus:border-green-500"
       />
     </div>
 
@@ -2490,7 +2490,7 @@ return (
       onClick={() =>
         setConfirmandoDevolucion(true)
       }
-      className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+      className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
     >
       Continuar
     </button>

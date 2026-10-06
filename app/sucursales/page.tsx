@@ -290,7 +290,7 @@ setSucursalesAdmin(
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+            <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
               Administración
             </p>
 
@@ -336,7 +336,7 @@ setSucursalesAdmin(
                   </h2>
 
                   {sucursal.is_main && (
-                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                    <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
                       Principal
                     </span>
                   )}
@@ -405,7 +405,7 @@ setSucursalesAdmin(
             disabled={!puedeCrear}
             className={`rounded-xl px-5 py-3 font-semibold transition ${
               puedeCrear
-                ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                ? "bg-green-600 text-white hover:bg-green-700"
                 : "cursor-not-allowed bg-slate-200 text-slate-500"
             }`}
           >
@@ -455,7 +455,7 @@ setSucursalesAdmin(
           }
           placeholder="Ej. Sucursal Centro"
           disabled={creandoSucursal}
-          className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-green-500"
         />
       </div>
 
@@ -472,7 +472,7 @@ setSucursalesAdmin(
           }
           placeholder="Ej. CENTRO"
           disabled={creandoSucursal}
-          className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 uppercase text-slate-900 outline-none focus:border-indigo-500"
+          className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 uppercase text-slate-900 outline-none focus:border-green-500"
         />
 
         <p className="mt-2 text-xs text-slate-400">
@@ -499,7 +499,7 @@ setSucursalesAdmin(
             creandoSucursal ||
             !nombreSucursal.trim()
           }
-          className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 rounded-xl bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {creandoSucursal
             ? "Creando..."
