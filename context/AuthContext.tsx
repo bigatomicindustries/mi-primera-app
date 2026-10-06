@@ -48,11 +48,12 @@ type AuthContextType = {
   sucursalActiva: Sucursal | null;
   cambiarSucursal: (branchId: string) => void;
 
-  cargando: boolean;
-  cargandoSucursales: boolean;
+cargando: boolean;
+cargandoSucursales: boolean;
+cerrandoSesion: boolean;
 
-  negocioSuspendido: boolean;
-  puedeOperar: boolean;
+negocioSuspendido: boolean;
+puedeOperar: boolean;
 
   esAdmin: boolean;
   esManager: boolean;
@@ -101,6 +102,9 @@ const [
 
   const [cargando, setCargando] =
     useState(true);
+
+    const [cerrandoSesion, setCerrandoSesion] =
+  useState(false);
 
 const [
   negocioSuspendido,
@@ -506,10 +510,15 @@ useEffect(() => {
   };
 }, [negocio?.id, user?.id]);
 
-  async function cerrarSesion() {
-    limpiarEstado();
+async function cerrarSesion() {
+  setCerrandoSesion(true);
+
+  try {
     await supabase.auth.signOut();
+  } finally {
+    limpiarEstado();
   }
+}
 
   const esAdmin =
     perfil?.role === "admin";
@@ -536,6 +545,7 @@ return (
 
     cargando,
     cargandoSucursales,
+    cerrandoSesion,
 
     negocioSuspendido,
     puedeOperar,

@@ -16,12 +16,13 @@ function ContenidoPrivado({
 }) {
   const pathname = usePathname();
 
-  const {
-    puedeOperar,
-    negocioSuspendido,
-    esPlatformAdmin,
-    cargando,
-  } = useAuth();
+const {
+  puedeOperar,
+  negocioSuspendido,
+  esPlatformAdmin,
+  cargando,
+  cerrandoSesion,
+} = useAuth();
 
   const esRutaSuperAdmin =
     pathname.startsWith("/superadmin");
@@ -68,6 +69,7 @@ function ContenidoPrivado({
 
 const mostrarBloqueoSuscripcion =
   !cargando &&
+  !cerrandoSesion &&
   !puedeOperar &&
   !esRutaPlan;
 
