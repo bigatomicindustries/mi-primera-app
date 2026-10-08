@@ -573,7 +573,7 @@ className={`text-xs transition-transform duration-200 ${
   </button>
 
 {mostrarMas && (
-<div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border bg-white p-2 shadow-xl">
+  <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
 {puedeAdministrar && (
   <Link
     href="/compras"
@@ -723,8 +723,7 @@ onClick={() => {
               </button>
 
               {mostrarUsuario && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border bg-white p-2 shadow-xl">
-
+<div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border bg-white p-2 shadow-xl">
                   <div className="border-b px-4 py-3">
                     <p className="font-semibold text-slate-900">
                       {perfil.full_name}
