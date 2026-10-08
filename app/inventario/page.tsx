@@ -198,10 +198,25 @@ if (puedeAdministrar) {
 
   const totalProductos = productos.length;
 
-  const unidadesInventario = productos.reduce(
+const piezasInventario = productos
+  .filter((producto) => producto.sale_unit !== "kg")
+  .reduce(
     (total, producto) => total + Number(producto.stock),
     0
   );
+
+const kilosInventario = productos
+  .filter((producto) => producto.sale_unit === "kg")
+  .reduce(
+    (total, producto) => total + Number(producto.stock),
+    0
+  );
+
+const formatoCantidadKg = (cantidad: number) =>
+  new Intl.NumberFormat("es-MX", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  }).format(cantidad);
 
   const valorInventario = productos.reduce(
     (total, producto) =>
@@ -637,15 +652,31 @@ const { data, error } = await supabase.rpc(
             </p>
           </div>
 
-          <div className="rounded-2xl border bg-white p-6">
-            <p className="text-sm text-slate-500">
-              Unidades en inventario
-            </p>
+<div className="rounded-2xl border bg-white p-6">
+  <p className="text-sm text-slate-500">
+    Existencias en inventario
+  </p>
 
-            <p className="mt-2 text-3xl font-bold text-slate-900">
-              {unidadesInventario}
-            </p>
-          </div>
+  <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2">
+    <div>
+      <p className="text-2xl font-bold text-slate-900">
+        {piezasInventario}
+      </p>
+      <p className="text-xs text-slate-500">
+        Piezas
+      </p>
+    </div>
+
+    <div>
+      <p className="text-2xl font-bold text-slate-900">
+        {formatoCantidadKg(kilosInventario)}
+      </p>
+      <p className="text-xs text-slate-500">
+        Kilogramos
+      </p>
+    </div>
+  </div>
+</div>
 
 {puedeAdministrar && (
   <div className="rounded-2xl border bg-white p-6">
@@ -767,11 +798,17 @@ const { data, error } = await supabase.rpc(
                         {formatoDinero(Number(producto.sale_price))}
                       </td>
 
-                      <td className="px-6 py-5">
-                        <span className="text-lg font-bold">
-                          {producto.stock}
-                        </span>
-                      </td>
+<td className="px-6 py-5">
+  <span className="text-lg font-bold text-slate-900">
+    {producto.sale_unit === "kg"
+      ? formatoCantidadKg(producto.stock)
+      : producto.stock}
+  </span>
+
+  <span className="ml-1 text-sm font-medium text-slate-500">
+    {producto.sale_unit === "kg" ? "kg" : "pzas"}
+  </span>
+</td>
 
                       <td className="px-6 py-5">
 

@@ -182,8 +182,8 @@ function agregarProducto(product: Product) {
       (item) => item.id === product.id
     );
 
-    const incremento =
-      product.sale_unit === "kg" ? 0.001 : 1;
+const incremento =
+  product.sale_unit === "kg" ? 0.250 : 1;
 
     if (existing) {
 const nuevaCantidad =
@@ -205,18 +205,31 @@ const nuevaCantidad =
       );
     }
 
-    if (product.stock <= 0) {
-      return currentCart;
-    }
+if (product.stock <= 0) {
+  return currentCart;
+}
+
+if (
+  product.sale_unit === "kg" &&
+  product.stock < 0.250
+) {
+  return [
+    ...currentCart,
+    {
+      ...product,
+      quantity: Number(product.stock.toFixed(3)),
+    },
+  ];
+}
 
     return [
       ...currentCart,
       {
         ...product,
-        quantity:
-          product.sale_unit === "kg"
-            ? 0.001
-            : 1,
+quantity:
+  product.sale_unit === "kg"
+    ? 0.250
+    : 1,
       },
     ];
   });
@@ -233,8 +246,8 @@ function aumentarCantidad(id: string) {
         return item;
       }
 
-      const incremento =
-        item.sale_unit === "kg" ? 0.001 : 1;
+const incremento =
+  item.sale_unit === "kg" ? 0.250 : 1;
 
 const nuevaCantidad =
   item.sale_unit === "kg"
@@ -265,8 +278,8 @@ function disminuirCantidad(id: string) {
           return item;
         }
 
-        const decremento =
-          item.sale_unit === "kg" ? 0.001 : 1;
+const decremento =
+  item.sale_unit === "kg" ? 0.250 : 1;
 
 const nuevaCantidad =
   item.sale_unit === "kg"
