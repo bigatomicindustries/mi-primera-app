@@ -1,3 +1,4 @@
+
 import {
   generateKeyPairSync,
   sign,
@@ -5,35 +6,58 @@ import {
 } from "node:crypto";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+import { execFileSync } from "node:child_process";
 
 const BASE_URL = "http://127.0.0.1:3000";
+
 const TOKEN_REGEX = /^[0-9a-f]{64}$/;
 const CHALLENGE_REGEX = /^[0-9a-f]{64}$/;
+
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 async function solicitarCodigo() {
-  if (!stdin.isTTY) {
-    throw new Error("Ejecuta el simulador en una terminal interactiva.");
+  if (!stdin.isTTY || !stdout.isTTY) {
+    throw new Error(
+      "Ejecuta el simulador en una terminal interactiva."
+    );
   }
 
   const rl = createInterface({
     input: stdin,
     output: stdout,
-    terminal: true,
+    terminal: false,
   });
 
+  let ecoDesactivado = false;
+
   try {
-    const codigo = (await rl.question(
-      "Introduce el código temporal DEV: "
-    )).trim();
+    execFileSync("stty", ["-echo"], {
+      stdio: ["inherit", "ignore", "ignore"],
+    });
+
+    ecoDesactivado = true;
+
+    stdout.write("Introduce el código temporal DEV (oculto): ");
+
+    const codigo = (await rl.question("")).trim();
+
+    stdout.write("\n");
 
     if (!TOKEN_REGEX.test(codigo)) {
-      throw new Error("El código debe contener 64 caracteres hexadecimales.");
+      throw new Error(
+        "El código debe contener 64 caracteres hexadecimales."
+      );
     }
 
     return codigo;
   } finally {
+    if (ecoDesactivado) {
+      execFileSync("stty", ["echo"], {
+        stdio: ["inherit", "ignore", "ignore"],
+      });
+    }
+
     rl.close();
   }
 }
@@ -60,25 +84,38 @@ async function enviarSolicitud(ruta, body) {
 }
 
 async function main() {
-  const { publicKey, privateKey } = generateKeyPairSync("ec", {
-    namedCurve: "prime256v1",
-  });
+  // Generar un par de claves ECDSA P-256.
+  // La clave privada permanece únicamente en memoria.
+  const { publicKey, privateKey } = generateKeyPairSync(
+    "ec",
+    {
+      namedCurve: "prime256v1",
+    }
+  );
 
-  const publicKeyJwk = publicKey.export({ format: "jwk" });
+  const publicKeyJwk = publicKey.export({
+    format: "jwk",
+  });
 
   if (
     publicKeyJwk.kty !== "EC" ||
     publicKeyJwk.crv !== "P-256"
   ) {
-    throw new Error("No se pudo generar una clave P-256.");
+    throw new Error(
+      "No se pudo generar una clave P-256."
+    );
   }
 
   console.log("Simulador de vinculación DEV");
   console.log("Servidor:", BASE_URL);
-  console.log("Las claves privadas no se guardarán en archivos.");
+  console.log(
+    "Las claves privadas no se guardarán en archivos."
+  );
 
+  // Solicitar código temporal sin mostrarlo.
   const token = await solicitarCodigo();
 
+  // Solicitar desafío criptográfico al servidor DEV.
   const challengeData = await enviarSolicitud(
     "/api/devices/pairing/challenge",
     {
@@ -97,9 +134,12 @@ async function main() {
     !UUID_REGEX.test(challengeData.challengeId) ||
     !CHALLENGE_REGEX.test(challengeData.challenge)
   ) {
-    throw new Error("El servidor devolvió un desafío inválido.");
+    throw new Error(
+      "El servidor devolvió un desafío inválido."
+    );
   }
 
+  // Firmar el desafío con la clave privada local.
   const signature = sign(
     "sha256",
     Buffer.from(challengeData.challenge, "utf8"),
@@ -109,6 +149,7 @@ async function main() {
     }
   );
 
+  // Verificar la firma antes de enviarla.
   const signatureValid = verify(
     "sha256",
     Buffer.from(challengeData.challenge, "utf8"),
@@ -120,9 +161,12 @@ async function main() {
   );
 
   if (!signatureValid || signature.length !== 64) {
-    throw new Error("No se pudo verificar la firma local.");
+    throw new Error(
+      "No se pudo verificar la firma local."
+    );
   }
 
+  // Confirmar vinculación con el servidor DEV.
   const confirmation = await enviarSolicitud(
     "/api/devices/pairing/confirm",
     {
@@ -136,9 +180,12 @@ async function main() {
     confirmation?.success !== true ||
     !UUID_REGEX.test(confirmation.deviceId)
   ) {
-    throw new Error("La confirmación devolvió un resultado inválido.");
+    throw new Error(
+      "La confirmación devolvió un resultado inválido."
+    );
   }
 
+  // Mostrar únicamente información no secreta.
   console.table({
     vinculacionExitosa: true,
     dispositivoId: confirmation.deviceId,
@@ -149,7 +196,10 @@ async function main() {
 main().catch((error) => {
   console.error(
     "Prueba detenida:",
-    error instanceof Error ? error.message : "Error desconocido"
+    error instanceof Error
+      ? error.message
+      : "Error desconocido"
   );
+
   process.exitCode = 1;
 });
