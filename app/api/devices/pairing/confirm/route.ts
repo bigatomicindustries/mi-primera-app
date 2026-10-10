@@ -166,28 +166,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ---------------------------------------------------
-  // SEGURIDAD 2: EXIGIR DESAFÍO DE PRUEBA AUTORIZADO
-  // ---------------------------------------------------
-
-  const allowedTestChallengeId =
-    process.env.DEVICE_PAIRING_TEST_CHALLENGE_ID;
-
-  if (
-    !allowedTestChallengeId ||
-    !UUID_REGEX.test(allowedTestChallengeId)
-  ) {
-    return NextResponse.json(
-      {
-        error: "Confirmación de prueba no configurada.",
-      },
-      {
-        status: 503,
-        headers: RESPONSE_HEADERS,
-      }
-    );
-  }
-
   try {
     // -------------------------------------------------
     // SEGURIDAD 3: LÍMITE GLOBAL
@@ -230,26 +208,6 @@ const rateLimit = await checkDevicePairingRateLimit(
       challenge,
       signature,
     } = solicitud;
-
-    // -------------------------------------------------
-    // SEGURIDAD 5: PERMITIR SOLO EL DESAFÍO AUTORIZADO
-    // -------------------------------------------------
-
-    if (
-      challengeId.toLowerCase() !==
-      allowedTestChallengeId.toLowerCase()
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Confirmación no autorizada para esta prueba.",
-        },
-        {
-          status: 403,
-          headers: RESPONSE_HEADERS,
-        }
-      );
-    }
 
     // -------------------------------------------------
     // SEGURIDAD 6: LÍMITE POR DESAFÍO
