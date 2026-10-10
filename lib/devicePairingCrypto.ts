@@ -78,3 +78,40 @@ export function verifyDevicePairingSignature(
     return false;
   }
 }
+
+export function isValidDevicePublicKey(
+  value: unknown
+): value is JsonWebKey {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+
+  const key = value as Record<string, unknown>;
+
+  if (
+    key.kty !== "EC" ||
+    key.crv !== "P-256" ||
+    !isValidP256Coordinate(key.x) ||
+    !isValidP256Coordinate(key.y) ||
+    Object.keys(key).some(
+      (field) => !["kty", "crv", "x", "y"].includes(field)
+    )
+  ) {
+    return false;
+  }
+
+  try {
+    createPublicKey({
+      key: key as JsonWebKey,
+      format: "jwk",
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+}

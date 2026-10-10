@@ -262,6 +262,41 @@ className={`text-xs transition-transform duration-200 ${
               </Link>
             )}
 
+            {/* DISPOSITIVOS */}
+
+{perfil?.role === "admin" && (
+  <Link
+    href="/dispositivos"
+    onClick={() => setMostrarMas(false)}
+    className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+  >
+    <p className="text-sm font-semibold text-slate-900">
+      Dispositivos
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      Vincula y administra teléfonos y tabletas
+    </p>
+  </Link>
+)}
+
+{/* DISPOSITIVOS */}
+
+{perfil?.role === "admin" && (
+  <Link
+    href="/dispositivos"
+    onClick={() => setMostrarMas(false)}
+    className="block rounded-xl px-4 py-3 transition hover:bg-slate-50"
+  >
+    <p className="text-sm font-semibold text-slate-900">
+      Dispositivos
+    </p>
+
+    <p className="mt-1 text-xs text-slate-500">
+      Vincula y administra teléfonos y tabletas
+    </p>
+  </Link>
+)}
 
             <Link
               href="/historial"
@@ -556,6 +591,7 @@ className={`text-xs transition-transform duration-200 ${
       pathname === "/transferencias" ||
       pathname === "/historial-cajas" ||
       pathname === "/usuarios" ||
+      pathname === "/dispositivos" ||
       pathname.startsWith("/configuracion")
         ? "bg-slate-900 text-white"
         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
