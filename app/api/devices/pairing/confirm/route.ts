@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
 
 const rateLimit = await checkDevicePairingRateLimit(
   "device-pairing-confirm:global",
-  "confirmation"
+  "global"
 );
 
     if (!rateLimit.allowed) {

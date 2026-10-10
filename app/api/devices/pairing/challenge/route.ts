@@ -180,10 +180,10 @@ export async function POST(request: Request) {
     // SEGURIDAD 3: LÍMITE GLOBAL DE SOLICITUDES
     // -------------------------------------------------
 
-    const rateLimit = await checkDevicePairingRateLimit(
-      "device-pairing-challenge:global",
-      "challenge"
-    );
+const rateLimit = await checkDevicePairingRateLimit(
+  "device-pairing-challenge:global",
+  "global"
+);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(

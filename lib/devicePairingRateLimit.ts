@@ -10,7 +10,8 @@ type PairingRateLimitPolicy =
   | "default"
   | "token"
   | "challenge"
-  | "confirmation";
+  | "confirmation"
+  | "global";
 
 const policies: Record<
   PairingRateLimitPolicy,
@@ -20,6 +21,7 @@ const policies: Record<
   token: { requests: 10, window: "10 m" },
   challenge: { requests: 10, window: "10 m" },
   confirmation: { requests: 10, window: "10 m" },
+  global: { requests: 200, window: "10 m" },
 };
 
 const limiters = Object.fromEntries(
