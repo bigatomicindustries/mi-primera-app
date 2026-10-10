@@ -193,9 +193,10 @@ export async function POST(request: NextRequest) {
     // SEGURIDAD 3: LÍMITE GLOBAL
     // -------------------------------------------------
 
-    const rateLimit = await checkDevicePairingRateLimit(
-      "device-pairing-confirm:global"
-    );
+const rateLimit = await checkDevicePairingRateLimit(
+  "device-pairing-confirm:global",
+  "confirmation"
+);
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -254,10 +255,11 @@ export async function POST(request: NextRequest) {
     // SEGURIDAD 6: LÍMITE POR DESAFÍO
     // -------------------------------------------------
 
-    const challengeRateLimit =
-      await checkDevicePairingRateLimit(
-        `device-pairing-confirm:challenge:${challengeId.toLowerCase()}`
-      );
+const challengeRateLimit =
+  await checkDevicePairingRateLimit(
+    `device-pairing-confirm:challenge:${challengeId.toLowerCase()}`,
+    "confirmation"
+  );
 
     if (!challengeRateLimit.allowed) {
       return NextResponse.json(

@@ -181,7 +181,8 @@ export async function POST(request: Request) {
     // -------------------------------------------------
 
     const rateLimit = await checkDevicePairingRateLimit(
-      "device-pairing-challenge:global"
+      "device-pairing-challenge:global",
+      "challenge"
     );
 
     if (!rateLimit.allowed) {
@@ -237,7 +238,8 @@ export async function POST(request: Request) {
 
     const tokenRateLimit =
       await checkDevicePairingRateLimit(
-        `device-pairing-challenge:token:${tokenHash}`
+        `device-pairing-challenge:token:${tokenHash}`,
+        "challenge"
       );
 
     if (!tokenRateLimit.allowed) {

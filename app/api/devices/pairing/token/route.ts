@@ -61,8 +61,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const rateLimit = await checkDevicePairingRateLimit(
-  `device-pairing-token:user:${user.id}`
+const rateLimit = await checkDevicePairingRateLimit(
+  `device-pairing-token:user:${user.id}`,
+  "token"
 );
 
 if (!rateLimit.allowed) {
