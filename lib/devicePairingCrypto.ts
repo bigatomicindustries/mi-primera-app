@@ -6,6 +6,22 @@ import {
   type JsonWebKey,
 } from "node:crypto";
 
+function isValidP256Coordinate(value: unknown): value is string {
+  if (
+    typeof value !== "string" ||
+    !/^[A-Za-z0-9_-]{43}$/.test(value)
+  ) {
+    return false;
+  }
+
+  const decoded = Buffer.from(value, "base64url");
+
+  return (
+    decoded.length === 32 &&
+    decoded.toString("base64url") === value
+  );
+}
+
 export function verifyDevicePairingSignature(
   publicKeyJwk: JsonWebKey,
   challenge: string,
@@ -13,18 +29,33 @@ export function verifyDevicePairingSignature(
 ): boolean {
   try {
     if (
+      !publicKeyJwk ||
       publicKeyJwk.kty !== "EC" ||
       publicKeyJwk.crv !== "P-256" ||
-      typeof publicKeyJwk.x !== "string" ||
-      typeof publicKeyJwk.y !== "string" ||
+      !isValidP256Coordinate(publicKeyJwk.x) ||
+      !isValidP256Coordinate(publicKeyJwk.y) ||
       "d" in publicKeyJwk
     ) {
       return false;
     }
 
     if (
+      typeof challenge !== "string" ||
       !/^[0-9a-f]{64}$/.test(challenge) ||
-      !/^[A-Za-z0-9_-]+$/.test(signatureBase64Url)
+      typeof signatureBase64Url !== "string" ||
+      !/^[A-Za-z0-9_-]{86}$/.test(signatureBase64Url)
+    ) {
+      return false;
+    }
+
+    const signature = Buffer.from(
+      signatureBase64Url,
+      "base64url"
+    );
+
+    if (
+      signature.length !== 64 ||
+      signature.toString("base64url") !== signatureBase64Url
     ) {
       return false;
     }
@@ -33,11 +64,6 @@ export function verifyDevicePairingSignature(
       key: publicKeyJwk,
       format: "jwk",
     });
-
-    const signature = Buffer.from(
-      signatureBase64Url,
-      "base64url"
-    );
 
     return verify(
       "sha256",
