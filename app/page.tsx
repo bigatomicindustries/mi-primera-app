@@ -523,7 +523,7 @@ const efectivoEsperadoCaja =
 <p className="text-sm font-semibold uppercase tracking-wide text-green-600">
   {negocio?.name
     ? `${negocio.name} POS`
-    : "MI NEGOCIO POS"}
+    : "Mi Negocio"}
 </p>
 
             <h1 className="mt-2 text-3xl font-bold text-slate-900">
