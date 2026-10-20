@@ -297,6 +297,47 @@ export async function POST(request: Request) {
     });
   }
 
+  // Comprobar revocación en cada solicitud, no solo
+  // cuando se emitió el token de Redis.
+  let authorizedDevice: {
+    id: string;
+    status: string;
+    linked_at: string | null;
+    revoked_at: string | null;
+  } | null = null;
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("pos_devices")
+      .select("id, status, linked_at, revoked_at")
+      .eq("id", deviceId)
+      .maybeSingle();
+
+    if (error) {
+      return respond(503, {
+        error: "No fue posible verificar el dispositivo.",
+      });
+    }
+
+    authorizedDevice = data;
+  } catch {
+    return respond(503, {
+      error: "No fue posible verificar el dispositivo.",
+    });
+  }
+
+  if (
+    !authorizedDevice ||
+    authorizedDevice.id !== deviceId ||
+    authorizedDevice.status !== "active" ||
+    authorizedDevice.linked_at === null ||
+    authorizedDevice.revoked_at !== null
+  ) {
+    return respond(401, {
+      error: "Dispositivo desvinculado o no autorizado.",
+    });
+  }
+
   const input = await readBody(request);
 
   if (

@@ -3,6 +3,11 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 import { Redis } from "@upstash/redis";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import deviceAuthorization from "./deviceAuthorization.cjs";
+
+const { isAuthorizedMobileDevice } = deviceAuthorization;
+
 
 const redis = Redis.fromEnv();
 
@@ -89,6 +94,24 @@ export async function getMobileSyncDeviceId(
     typeof deviceId !== "string" ||
     !UUID_REGEX.test(deviceId)
   ) {
+    return null;
+  }
+
+  // Una sesión Redis válida no concede acceso por sí sola.
+  // Consultar el estado actual del dispositivo en cada solicitud.
+  const { data: device, error } = await supabaseAdmin
+    .from("pos_devices")
+    .select("id, business_id, status, linked_at, revoked_at")
+    .eq("id", deviceId.toLowerCase())
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      "No fue posible comprobar la autorización del dispositivo."
+    );
+  }
+
+  if (!isAuthorizedMobileDevice(device, deviceId.toLowerCase())) {
     return null;
   }
 
